@@ -1,58 +1,74 @@
+import random
 
+WIDTH = 100
+HEIGHT = 100
+
+class Point:
+	def __init__(self, x, y):
+		self.x = x
+		self.y = y
+
+	def __eq__(self, other):
+		return self.x == other.x and self.y == other.y
+	
+	def __repr__(self):
+		return f"({self.x}, {self.y})"
 
 def kmeans_iter(points, centroids):
+	k = len(centroids)
 	
-	new_centroids = [[0, 0], [0, 0]]
-	num_points = [1, 1]
+	new_centroids = [Point(0,0) for _ in range(k)]
+	num_points = [0 for _ in range(k)]
 
 	for p in points:
-		dist1 = abs(p[0] - centroids[0][0]) + abs(p[1] - centroids[0][1])
-		dist2 = abs(p[0] - centroids[1][0]) + abs(p[1] - centroids[1][1])
+		minDist = float('inf')
+		minDistCentroid = -1
+		for i in range(k):
+			dist = abs(p.x - centroids[i].x) + abs(p.y - centroids[i].y)
+			if dist < minDist:
+				minDist = dist
+				minDistCentroid = i
 
-		if dist1 < dist2:
-			num_points[0] += 1
-			new_centroids[0][0] += p[0]
-			new_centroids[0][1] += p[1]
+		num_points[minDistCentroid] += 1
+		new_centroids[minDistCentroid].x += p.x
+		new_centroids[minDistCentroid].y += p.y			
+
+	for i in range(k):
+		if num_points[i] == 0:
+			# Break out of local minima by randomly reassigning empty centroids
+			# Helps converge pretty quickly ~<20 iters when one centroid gets 0 assignments
+			new_centroids[i].x = random.randint(0, WIDTH)
+			new_centroids[i].y = random.randint(0, HEIGHT)
+
 		else:
-			num_points[1] += 1
-			new_centroids[1][0] += p[0]
-			new_centroids[1][1] += p[1]
-			
-
-	new_centroids[0][0] //= num_points[0]
-	new_centroids[0][1] //= num_points[0]
-	new_centroids[1][0] //= num_points[1]
-	new_centroids[1][1] //= num_points[1]
-	print(new_centroids)
+			new_centroids[i].x //= num_points[i]
+			new_centroids[i].y //= num_points[i]
 
 	return new_centroids
 
-
-center1 = (20,20)
-center2 = (60, 20)
-centroids = [[20,20], [60, 20]]
+centers = [Point(10,10), Point(40, 10)]
+centroids = [Point(30, 10), Point(40,30)]
 for num_iter in range(50):
-	# center 20,20
 
-	center1 = (center1[0]+1, center1[1] + 1)
-	center2 = (center2[0], center2[1]+1)
+	centers[0].x += 1
+	centers[0].y += 1
+	centers[1].y += 1
 
-
-	player_points = [(i,j) for i in range(100) for j in range(100) if (i-center1[0])**2 + (j-center1[1])**2 <= 10]
-	player_points.extend([(i,j) for i in range(100) for j in range(100) if (i-center2[0])**2 + (j-center2[1])**2 <= 10])
-
-
+	player_points = []
+	for k in range(len(centers)):
+		player_points.extend([Point(i,j) for i in range(WIDTH) for j in range(HEIGHT) if (i-centers[k].x)**2 + (j-centers[k].y)**2 <= 10])
 
 	centroids = kmeans_iter(player_points, centroids)
-
+	print(centroids)
 
 	print("-------------------------------------------------------")
 	print("iteration number:", num_iter)
-	for x in range(100):
-		for y in range(100):
-			if [x,y] in centroids :
+	print("-------------------------------------------------------")
+	for y in range(HEIGHT):
+		for x in range(WIDTH):
+			if Point(x,y) in centroids:
 				print("O", end="")
-			elif (x,y) in player_points:
+			elif Point(x,y) in player_points:
 				print("x", end="")
 			else:
 				print(".", end="")
