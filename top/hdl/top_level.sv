@@ -104,29 +104,6 @@ module top_level
   // rgb output values
   logic [7:0]    red,green,blue;
 
-
-
-  // used in week 6 part 2: clock domain crossing for our center of mass values
-  logic        zoom_view;
-  assign zoom_view = (sw[7:6] == 2'b11);
-  
-  // Center of Mass variables, just defined higher up now
-  logic [10:0] x_com, x_com_calc, zoom_center_x; //long term x_com and output from module, resp
-  logic [9:0]  y_com, y_com_calc, zoom_center_y; //long term y_com and output from module, resp
-  logic        new_com; //used to know when to update x_com and y_com ...
-
-  // // uncomment in part 2!
-  // logic [10:0] center_x_ui;
-  // logic [9:0] center_y_ui;
-  // xpm_cdc_array_single #(
-  //   .WIDTH(21)
-  //   ) com_sync (
-  //   .src_clk(clk_pixel),
-  //   .dest_clk(clk_ui),
-  //   .src_in({zoom_center_x, zoom_center_y}),
-  //   .dest_out({center_x_ui,center_y_ui}));
-
-
   // ** Handling input from the camera **
 
   // synchronizers to prevent metastability
@@ -350,11 +327,7 @@ module top_level
     .write_axis_valid (camera_ui_axis_tvalid),
     .write_axis_smallpile(camera_ui_axis_prog_empty),
     .read_axis_af     (display_ui_axis_prog_full),
-    .read_axis_ready  (display_ui_axis_tready) //,
-    // Uncomment for part 2!
-    // .zoom_view_en ( zoom_view ),
-    // .zoom_view_x ( center_x_ui ),
-    // .zoom_view_y( center_y_ui )
+    .read_axis_ready  (display_ui_axis_tready)
   );
 
   // the MIG IP!
@@ -557,68 +530,6 @@ module top_level
   assign ss0_c = ss_c; //control upper four digit's cathodes!
   assign ss1_c = ss_c; //same as above but for lower four digits!
 
-  //Center of Mass Calculation: (you need to do)
-  //using x_com_calc and y_com_calc values
-  //Center of Mass:
-  center_of_mass com_m(
-    .clk_in(clk_pixel),
-    .rst_in(sys_rst_pixel),
-    .x_in(hcount_hdmi),  
-    .y_in(vcount_hdmi), 
-    .valid_in(mask), 
-    .tabulate_in((nf_hdmi)),
-    .x_out(x_com_calc),
-    .y_out(y_com_calc),
-    .valid_out(new_com)
-  );
-
-  logic [10:0] x_com_transform;
-  logic [9:0]  y_com_transform;
-  // TODO in part 2:
-  // convert the calculated center of mass back to the original coordinate system
-  // use the current zoom_center_x and zoom_center_y to know the current view's system!
-  // this should take 2 lines.
-  always_comb begin
-    // x_com_transform = x_com_calc; // change me
-    // y_com_transform = y_com_calc; // change me
-  end
-  
-  //grab logic for above
-  //update center of mass x_com, y_com based on new_com signal
-  always_ff @(posedge clk_pixel)begin
-    if (sys_rst_pixel)begin
-      x_com         <= 0;
-      y_com         <= 0;
-      zoom_center_x <= 640;
-      zoom_center_y <= 360;
-    end if(new_com)begin
-      // store new long-term center of mass values.
-      if (zoom_view) begin
-        // used in part 2: convert calculated center of mass to original coordinate system
-        // use current zoom centers to determine it.
-        x_com <= x_com_transform;
-        y_com <= y_com_transform;
-      end else begin
-        // when not zoomed in, store the center of mass variables like normal
-        x_com <= x_com_calc;
-        y_com <= y_com_calc;
-      end
-
-      // update zoomed-in center: averaged value between current zoom center and new COM.
-      // this way, while we're zoomed in, the center of mass moves more smoothly!
-      if (zoom_view) begin
-        // you also might want to update this to bound where the center can go!
-        zoom_center_x <= 32'(zoom_center_x+zoom_center_x+zoom_center_x+x_com_transform)>>2;
-        zoom_center_y <= 32'(zoom_center_y+zoom_center_y+zoom_center_y+y_com_transform)>>2;
-      end else begin
-        zoom_center_x <= x_com;
-        zoom_center_y <= y_com;
-      end
-      
-    end
-    
-  end
-
   //image_sprite output:
   logic [7:0] img_red, img_green, img_blue;
 
@@ -626,17 +537,19 @@ module top_level
   //bring in an instance of your popcat image sprite! remember the correct mem files too!
 
 
-  //crosshair output:
-  logic [7:0] ch_red, ch_green, ch_blue;
+  // Commented out, but we might want to use this crosshair stuff for when we have a mask working.
 
-  //Create Crosshair patter on center of mass:
-  //0 cycle latency
-  //Should be using output of (PS3)
-  always_comb begin
-    ch_red   = ((vcount_hdmi==y_com) || (hcount_hdmi==x_com))?8'hFF:8'h00;
-    ch_green = ((vcount_hdmi==y_com) || (hcount_hdmi==x_com))?8'hFF:8'h00;
-    ch_blue  = ((vcount_hdmi==y_com) || (hcount_hdmi==x_com))?8'hFF:8'h00;
-  end
+  // //crosshair output:
+  // logic [7:0] ch_red, ch_green, ch_blue;
+
+  // //Create Crosshair patter on center of mass:
+  // //0 cycle latency
+  // //Should be using output of (PS3)
+  // always_comb begin
+  //   ch_red   = ((vcount_hdmi==y_com) || (hcount_hdmi==x_com))?8'hFF:8'h00;
+  //   ch_green = ((vcount_hdmi==y_com) || (hcount_hdmi==x_com))?8'hFF:8'h00;
+  //   ch_blue  = ((vcount_hdmi==y_com) || (hcount_hdmi==x_com))?8'hFF:8'h00;
+  // end
 
 
   // HDMI video signal generator
