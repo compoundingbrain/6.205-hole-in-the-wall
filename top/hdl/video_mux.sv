@@ -42,7 +42,7 @@ module video_mux (
       2'b00: l_2 = l_1;
       2'b01: l_2 = crosshair_in? 24'h00FF00:l_1;
       2'b10: l_2 = (com_sprite_pixel_in >0)?com_sprite_pixel_in:l_1;
-      2'b11: l_2 = 24'hFF7700; //test color
+      2'b11: l_2 = l_1; // update for week 6!
     endcase
   end
 

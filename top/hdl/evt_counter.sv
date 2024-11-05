@@ -3,7 +3,7 @@ module evt_counter #(parameter MAX_COUNT = 8000)
   ( input wire          clk_in,
     input wire          rst_in,
     input wire          evt_in,
-    output logic[15:0]  count_out
+    output logic[16:0]  count_out // switched to 17 bits for lab 6
   );
  
   always_ff @(posedge clk_in) begin
