@@ -1,3 +1,5 @@
 *.rpt
 *.zip
 *.dcp
+*__pycache*
+*_history*

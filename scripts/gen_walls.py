@@ -54,8 +54,8 @@ def main():
                 mouse_down_x, mouse_down_y = mouse_down_pos
                 mouse_up_x, mouse_up_y = event.pos
                 print(mouse_down_y, mouse_down_x, mouse_up_y, mouse_up_x)
-                for y in range(min(mouse_down_y, mouse_up_y)//PIXEL_SIZE, (max(mouse_down_y, mouse_up_y) + 2)//PIXEL_SIZE):
-                    for x in range(min(mouse_down_x, mouse_up_x)//PIXEL_SIZE, (max(mouse_down_x, mouse_up_x) + 2)//PIXEL_SIZE):
+                for y in range(min(mouse_down_y, mouse_up_y)//PIXEL_SIZE, (max(mouse_down_y, mouse_up_y))//PIXEL_SIZE + 1):
+                    for x in range(min(mouse_down_x, mouse_up_x)//PIXEL_SIZE, (max(mouse_down_x, mouse_up_x))//PIXEL_SIZE + 1):
                         wall[y][x] = 1 - wall[y][x]
                 
 

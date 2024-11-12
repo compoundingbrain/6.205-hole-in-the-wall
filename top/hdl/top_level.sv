@@ -43,6 +43,9 @@ module top_level
   output wire        ddr3_odt
 );
 
+  localparam SCREEN_WIDTH = 1280;
+  localparam SCREEN_HEIGHT = 720;
+
   // shut up those RGBs
   assign rgb0 = 0;
   assign rgb1 = 0;
@@ -87,6 +90,7 @@ module top_level
   assign cam_xclk = clk_xc;
 
   assign sys_rst_camera = btn[0]; //use for resetting camera side of logic
+  assign sys_rst_game_logic = btn[0]; //use for resetting game logic pipeline
   assign sys_rst_pixel = btn[0]; //use for resetting hdmi/draw side of logic
   assign sys_rst_migref = btn[0];
 
@@ -103,6 +107,10 @@ module top_level
 
   // rgb output values
   logic [7:0]    red,green,blue;
+
+  //============================================================================
+  // Camera Pipeline
+  //============================================================================
 
   // ** Handling input from the camera **
 
@@ -141,15 +149,13 @@ module top_level
     .pixel_hcount_out(camera_hcount),
     .pixel_vcount_out(camera_vcount),
     .pixel_data_out(camera_pixel));
-
-  // Two ways to store a frame buffer: subsampled BRAM, and full-quality DRAM.
   
   logic [15:0] frame_buff_dram; // data out of DRAM frame buffer
   logic [15:0] frame_buff_raw; // select between the two!
   assign frame_buff_raw = frame_buff_dram;
 
-  // 2. The New Way: write memory to DRAM and read it out, over a couple AXI-Stream data pipelines.
-  // NEW DRAM STUFF STARTS HERE
+  // Write memory to DRAM and read it out, over a couple AXI-Stream data pipelines.
+  // DRAM STUFF STARTS HERE
 
   logic [127:0] camera_chunk;
   logic [127:0] camera_axis_tdata;
@@ -165,8 +171,7 @@ module top_level
     .pixel_tvalid(camera_valid),
     .pixel_tready(),
     .pixel_tdata(camera_pixel),
-    // TODO: define the tlast value! you can do it in one line, based on camera hcount/vcount values
-    .pixel_tlast(camera_hcount == 1279 && camera_vcount == 719), // change me
+    .pixel_tlast(camera_hcount == 1279 && camera_vcount == 719), // define the tlast value
     .chunk_tvalid(camera_axis_tvalid),
     .chunk_tready(camera_axis_tready),
     .chunk_tdata(camera_axis_tdata),
@@ -346,8 +351,7 @@ module top_level
     .pixel_tdata(frame_buff_tdata),
     .pixel_tlast(frame_buff_tlast));
 
-  // TODO: assign frame_buff_tready
-  // I did this in 1 (kind of long) line. an always_comb block could also work.
+  // assign frame_buff_tready
   always_comb begin
     if (active_draw_hdmi) begin
       if(frame_buff_tlast && (hcount_hdmi != 1279 || vcount_hdmi != 719))
@@ -357,13 +361,10 @@ module top_level
     end else
       frame_buff_tready = 1'b0;
   end
-
-  // TODO in part 2: update this tready to also only be high for odd hcount values (every other drawn pixel gets a new value)
-
   
   assign frame_buff_dram = frame_buff_tvalid ? frame_buff_tdata : 16'h2277;
 
-  // NEW DRAM STUFF ENDS HERE: below here should look familiar from last week!
+  // DRAM STUFF ENDS HERE: below here should look familiar from last week!
 
   //split fame_buff into 3 8 bit color channels (5:6:5 adjusted accordingly)
   //remapped frame_buffer outputs with 8 bits for r, g, b
@@ -464,6 +465,41 @@ module top_level
   );
   assign ss0_c = ss_c; //control upper four digit's cathodes!
   assign ss1_c = ss_c; //same as above but for lower four digits!
+
+
+  //============================================================================
+  // Game Logic Pipeline
+  //============================================================================
+
+  logic new_round_pulse = 0;
+  logic curr_wall_idx = 0;
+
+
+  localparam BIT_MASK_DOWN_SAMPLE_FACTOR = 16;
+  localparam BIT_MASK_WIDTH = SCREEN_WIDTH / DOWN_SAMPLE_FACTOR;
+  localparam BIT_MASK_HEIGHT = SCREEN_HEIGHT / DOWN_SAMPLE_FACTOR;
+  localparam BIT_MASK_SIZE = BIT_MASK_WIDTH * BIT_MASK_HEIGHT;
+  logic [BIT_MASK_SIZE-1:0] bit_mask_storage_wall_out;
+  logic bit_mask_storage_wall_out_valid;
+  wall_bit_mask wall_bit_mask_storage #(
+    .SCREEN_WIDTH(SCREEN_WIDTH),
+    .SCREEN_HEIGHT(SCREEN_HEIGHT),
+    .DOWN_SAMPLE_FACTOR(BIT_MASK_DOWN_SAMPLE_FACTOR),
+    .BIT_MASK_WIDTH(.BIT_MASK_WIDTH),
+    .BIT_MASK_HEIGHT(.BIT_MASK_HEIGHT),
+    .BIT_MASK_SIZE(.BIT_MASK_SIZE)
+    )(
+    .clk_in(clk_pixel),
+    .rst_in(sys_rst_game_logic),
+    .valid_in(new_round_pulse),
+    .bitmask_idx(curr_wall_idx),
+    .valid_out(bit_mask_storage_wall_out),
+    .wall_bit_mask(bit_mask_storage_wall_out_valid)
+  ); 
+
+  //============================================================================
+  // Graphics Pipeline
+  //============================================================================
 
   //image_sprite output:
   logic [7:0] img_red, img_green, img_blue;
