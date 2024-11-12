@@ -3,3 +3,8 @@
 *.dcp
 *__pycache*
 *_history*
+*.vvp
+*.heir
+*.fst
+*.f
+*.xml
