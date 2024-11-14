@@ -472,31 +472,31 @@ module top_level
   // Game Logic Pipeline
   //============================================================================
 
-  logic new_round_pulse = 0;
-  logic curr_wall_idx = 0;
+  // logic new_round_pulse = 0;
+  // logic curr_wall_idx = 0;
 
 
-  localparam BIT_MASK_DOWN_SAMPLE_FACTOR = 16;
-  localparam BIT_MASK_WIDTH = SCREEN_WIDTH / BIT_MASK_DOWN_SAMPLE_FACTOR;
-  localparam BIT_MASK_HEIGHT = SCREEN_HEIGHT / BIT_MASK_DOWN_SAMPLE_FACTOR;
-  localparam BIT_MASK_SIZE = BIT_MASK_WIDTH * BIT_MASK_HEIGHT;
-  logic [BIT_MASK_SIZE-1:0] bit_mask_storage_wall_out;
-  logic bit_mask_storage_wall_out_valid;
-  wall_bit_mask  #(
-    .SCREEN_WIDTH(SCREEN_WIDTH),
-    .SCREEN_HEIGHT(SCREEN_HEIGHT),
-    .DOWN_SAMPLE_FACTOR(BIT_MASK_DOWN_SAMPLE_FACTOR),
-    .BIT_MASK_WIDTH(BIT_MASK_WIDTH),
-    .BIT_MASK_HEIGHT(BIT_MASK_HEIGHT),
-    .BIT_MASK_SIZE(BIT_MASK_SIZE)
-    ) wall_bit_mask_storage (
-    .clk_in(clk_pixel),
-    .rst_in(sys_rst_game_logic),
-    .valid_in(new_round_pulse),
-    .bitmask_idx(curr_wall_idx),
-    .valid_out(bit_mask_storage_wall_out),
-    .wall_bit_mask(bit_mask_storage_wall_out_valid)
-  ); 
+  // localparam BIT_MASK_DOWN_SAMPLE_FACTOR = 16;
+  // localparam BIT_MASK_WIDTH = SCREEN_WIDTH / BIT_MASK_DOWN_SAMPLE_FACTOR;
+  // localparam BIT_MASK_HEIGHT = SCREEN_HEIGHT / BIT_MASK_DOWN_SAMPLE_FACTOR;
+  // localparam BIT_MASK_SIZE = BIT_MASK_WIDTH * BIT_MASK_HEIGHT;
+  // logic [BIT_MASK_SIZE-1:0] bit_mask_storage_wall_out;
+  // logic bit_mask_storage_wall_out_valid;
+  // wall_bit_mask  #(
+  //   .SCREEN_WIDTH(SCREEN_WIDTH),
+  //   .SCREEN_HEIGHT(SCREEN_HEIGHT),
+  //   .DOWN_SAMPLE_FACTOR(BIT_MASK_DOWN_SAMPLE_FACTOR),
+  //   .BIT_MASK_WIDTH(BIT_MASK_WIDTH),
+  //   .BIT_MASK_HEIGHT(BIT_MASK_HEIGHT),
+  //   .BIT_MASK_SIZE(BIT_MASK_SIZE)
+  //   ) wall_bit_mask_storage (
+  //   .clk_in(clk_pixel),
+  //   .rst_in(sys_rst_game_logic),
+  //   .valid_in(new_round_pulse),
+  //   .bitmask_idx(curr_wall_idx),
+  //   .valid_out(bit_mask_storage_wall_out),
+  //   .wall_bit_mask(bit_mask_storage_wall_out_valid)
+  // ); 
 
   //============================================================================
   // Graphics Pipeline
