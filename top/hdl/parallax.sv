@@ -32,7 +32,7 @@ module parallax #(parameter RESOLUTION_WIDTH = 1280, parameter SENSOR_WIDTH = 0.
       disparity <= (x_1_in > x_2_in) ? (x_1_in - x_2_in) : (x_2_in - x_1_in); // absolute value
       
       // Final depth calculation
-      depth_out <= (disparity == 0) ? 8'hFF : PARALLAX_SCALE / disparity;
+      depth_out <= (disparity == 0) ? 8'hFF : PARALLAX_SCALE / disparity; // TODO: need to verify that this passes timing.
     end
   end
 endmodule
