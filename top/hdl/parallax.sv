@@ -5,11 +5,12 @@
 // Focal length and baseline distance in inches
 // Resolution is assuming 1280x720
 // Sensor width of the camera in inches
-module parallax #(parameter RESOLUTION_WIDTH = 1280, parameter SENSOR_WIDTH = 0.334646, parameter FOCAL_LENGTH = 0.1295276, parameter BASELINE_DISTANCE = 1)(
+// Takes two cycles to compute
+module parallax #(parameter RESOLUTION_WIDTH = 1280, parameter SENSOR_WIDTH = 0.334646, parameter FOCAL_LENGTH = 0.1295276, parameter BASELINE_DISTANCE = 6)(
   input wire clk_in,
   input wire rst_in,
   input wire [11:0] x_1_in, x_2_in,
-  output logic [7:0] depth_out
+  output logic [11:0] depth_out
 );
 
   // Need to get the pixels per inch of sensor then multiply by the focal length
@@ -28,7 +29,7 @@ module parallax #(parameter RESOLUTION_WIDTH = 1280, parameter SENSOR_WIDTH = 0.
       depth_out <= 0;
     end else begin
       // Calculate disparity (difference in x coordinates between images)
-      disparity = x_1_in - x_2_in;
+      disparity <= (x_1_in > x_2_in) ? (x_1_in - x_2_in) : (x_2_in - x_1_in); // absolute value
       
       // Final depth calculation
       depth_out <= (disparity == 0) ? 8'hFF : PARALLAX_SCALE / disparity;
