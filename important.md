@@ -12,7 +12,7 @@ Use python 3.12
 
 to compile code:
 
-`lab-bc run lab01 obj` from PSETs dir
+`lab-bc run top obj`
 
 to flash board:
 

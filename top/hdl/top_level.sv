@@ -487,6 +487,7 @@ module top_level
   //used with switches for display selections
   logic [1:0] display_choice;
   logic [1:0] target_choice;
+  logic [7:0] graphics_red, graphics_green, graphics_blue;
 
   assign display_choice = sw[5:4];
   assign target_choice =  sw[7:6];
@@ -512,7 +513,23 @@ module top_level
     .thresholded_pixel_in(mask), //one bit mask signal
     .crosshair_in({0, 0, 0}), 
     .com_sprite_pixel_in({img_red, img_green, img_blue}), 
-    .pixel_out({red,green,blue}) //output to tmds
+    .pixel_out({graphics_red, graphics_green, graphics_blue}) //output to tmds
+  );
+
+  // Graphics Controller
+
+  graphics_controller #(.ACTIVE_H_PIXELS(1280), .ACTIVE_LINES(720))
+  gc (
+    .clk_in(clk_pixel),
+    .rst_in(sys_rst_pixel),
+    .h_count_in(hcount_hdmi),
+    .v_count_in(vcount_hdmi),
+    .wall_depth(8'b0),
+    .player_depth(8'b0),
+    .is_wall(sw[15]),
+    .wall_color(16'hf000), //red
+    .pixel_in({graphics_red, graphics_green, graphics_blue}),
+    .pixel_out({red, green, blue})
   );
 
   // HDMI Output: just like before!

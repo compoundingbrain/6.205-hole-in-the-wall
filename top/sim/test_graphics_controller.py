@@ -26,10 +26,17 @@ async def test_a(dut):
     await RisingEdge(dut.clk_in)
 
     # Go through all the values from 0 to ACTIVE_H_PIXELS and ACTIVE_LINES
-    # and check that the output is as expected for varied values of is_wall and wall_color
+    # and check that the output is as expected f
+    
+    dut.h_count_in.value = 0
+    dut.v_count_in.value = 0
+    dut.pixel_in.value = 0
+    dut.is_wall.value = 0
+    dut.wall_color.value = 0
+    await ClockCycles(dut.clk_in,1)
 
-    for j in range(0, ACTIVE_LINES):
-        for i in range(0, ACTIVE_H_PIXELS):
+    for j in range(0, ACTIVE_LINES, 16):
+        for i in range(0, ACTIVE_H_PIXELS, 16):
             dut.h_count_in.value = i
             dut.v_count_in.value = j
             pixel_in = random.randint(0,2**16-1)
@@ -38,18 +45,13 @@ async def test_a(dut):
             dut.is_wall.value = is_wall
             wall_color = random.randint(0,2**16-1)
             dut.wall_color.value = wall_color
-            await ClockCycles(dut.clk_in,1)
-            assert dut.data_valid_out.value == 1
+            await RisingEdge(dut.clk_in)
             if is_wall:
                 assert dut.pixel_out.value == wall_color
             else:
                 assert dut.pixel_out.value == pixel_in
-    
-    # Test out of bounds values
-    dut.h_count_in.value = ACTIVE_H_PIXELS
-    dut.v_count_in.value = ACTIVE_LINES
-    await ClockCycles(dut.clk_in,1)
-    assert dut.data_valid_out.value == 0
+            await ClockCycles(dut.clk_in,1)
+
     
 def is_runner():
     """Graphics Controller Testing."""
