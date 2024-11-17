@@ -28,24 +28,32 @@ module game_logic_controller #(
     output logic [15:0]        pixel_out,
     output logic               data_valid_out,
 
-    output logic               is_wall_out,
     output logic [7:0]         wall_depth_out,
     output logic [7:0]         player_depth_out,
+    output logic               is_wall_out,
     output logic               is_person_out,
+    output logic               is_collision_out,
+
     output logic [2:0]         game_state
 );
-    logic new_round_pulse;
+    // Round and frame info
     logic [7:0] curr_round;
-
-    logic curr_wall_idx;
-    logic [6:0] bitmask_x = hcount_in[10:4];
-    logic [5:0] bitmask_y = vcount_in[9:4];
-
+    logic new_round_pulse;
     logic new_frame;
     assign new_frame = (hcount_in == SCREEN_WIDTH - 1 && vcount_in == SCREEN_HEIGHT - 1 && data_valid_in);
 
+    // Wall and collision info
+    logic curr_wall_idx;
+    logic [6:0] bitmask_x;
+    logic [5:0] bitmask_y;
+    logic is_wall;
+    logic is_collision;
+    assign bitmask_x = hcount_in[10:4];
+    assign bitmask_y = vcount_in[9:4];
+    assign is_wall = bit_mask_wall[bitmask_x + (bitmask_y * BIT_MASK_WIDTH)];
+    assign is_collision = is_person_in && is_wall;
 
-    // Wall depth: move wall forward one inch every `wall_tick_frequency` frames
+    // Move wall forward one inch every `wall_tick_frequency` frames
     logic [7:0] wall_depth;
     logic wall_depth_rst;
     logic wall_tick_pulse;
@@ -115,12 +123,32 @@ module game_logic_controller #(
             wall_depth_rst <= 0;
             new_round_pulse <= 0;
             wall_tick_pulse <= 0;
+            game_state <= 1;
             
         end else begin
             if (new_round_pulse) begin
                 // New round
                 curr_round <= curr_round + 1;
             end
+
+            if (data_valid_in &&
+                (wall_depth >= (GOAL_DEPTH - GOAL_DEPTH_DELTA)) &&
+                (wall_depth <= (GOAL_DEPTH + GOAL_DEPTH_DELTA)) && 
+                is_collision) begin
+                // Pixel collision
+                game_state <= 0;
+            end
+
+            is_wall_out <= is_wall;
+            is_person_out <= is_person_in;
+            is_collision_out <= is_collision;
+            wall_depth_out <= wall_depth;
+            player_depth_out <= player_depth_in;
+
+            hcount_out <= hcount_in;
+            vcount_out <= vcount_in;
+            pixel_out <= pixel_in;
+            data_valid_out <= data_valid_in;
         end
     end
 

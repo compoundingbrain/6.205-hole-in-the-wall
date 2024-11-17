@@ -61,9 +61,10 @@ async def test_a(dut):
                     dut.vcount_in.value = y
                     dut.pixel_in.value = 0
                     dut.data_valid_in.value = 1
-                    dut.is_person_in.value = 0
+                    dut.is_person_in.value = 1
                     dut.player_depth_in.value = 0
-                    await FallingEdge(dut.clk_in)    
+                    await FallingEdge(dut.clk_in)  
+                    #TODO: Test with hsync/vsync  
 
 def test_runner():
     """Simulate the counter using the Python runner."""
