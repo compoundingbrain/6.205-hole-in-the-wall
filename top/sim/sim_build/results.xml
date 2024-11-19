@@ -1,6 +1,0 @@
-<testsuites name="results">
-  <testsuite name="all" package="all">
-    <property name="random_seed" value="1731447388" />
-    <testcase name="test_a" classname="test_wall_bit_mask" file="/home/nathan/holeInTheWall-62050/top/sim/test_wall_bit_mask.py" lineno="39" time="0.003657817840576172" sim_time_ns="90.001" ratio_time="24605.107176639292" />
-  </testsuite>
-</testsuites>

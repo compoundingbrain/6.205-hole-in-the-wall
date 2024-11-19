@@ -9,3 +9,5 @@
 *.f
 *.xml
 *.out
+top/obj/
+top/sim/sim_build/cocotb_iverilog_dump.v
