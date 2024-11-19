@@ -472,31 +472,37 @@ module top_level
   // Game Logic Pipeline
   //============================================================================
 
-  // logic new_round_pulse = 0;
-  // logic curr_wall_idx = 0;
-
-
-  // localparam BIT_MASK_DOWN_SAMPLE_FACTOR = 16;
-  // localparam BIT_MASK_WIDTH = SCREEN_WIDTH / BIT_MASK_DOWN_SAMPLE_FACTOR;
-  // localparam BIT_MASK_HEIGHT = SCREEN_HEIGHT / BIT_MASK_DOWN_SAMPLE_FACTOR;
-  // localparam BIT_MASK_SIZE = BIT_MASK_WIDTH * BIT_MASK_HEIGHT;
-  // logic [BIT_MASK_SIZE-1:0] bit_mask_storage_wall_out;
-  // logic bit_mask_storage_wall_out_valid;
-  // wall_bit_mask  #(
-  //   .SCREEN_WIDTH(SCREEN_WIDTH),
-  //   .SCREEN_HEIGHT(SCREEN_HEIGHT),
-  //   .DOWN_SAMPLE_FACTOR(BIT_MASK_DOWN_SAMPLE_FACTOR),
-  //   .BIT_MASK_WIDTH(BIT_MASK_WIDTH),
-  //   .BIT_MASK_HEIGHT(BIT_MASK_HEIGHT),
-  //   .BIT_MASK_SIZE(BIT_MASK_SIZE)
-  //   ) wall_bit_mask_storage (
-  //   .clk_in(clk_pixel),
-  //   .rst_in(sys_rst_game_logic),
-  //   .valid_in(new_round_pulse),
-  //   .bitmask_idx(curr_wall_idx),
-  //   .valid_out(bit_mask_storage_wall_out),
-  //   .wall_bit_mask(bit_mask_storage_wall_out_valid)
-  // ); 
+  logic [7:0] wall_depth;
+  logic pixel_is_wall;
+  logic pixel_is_collision;
+  logic [2:0] game_state;
+  game_logic_controller #(
+    .SCREEN_WIDTH(SCREEN_WIDTH), 
+    .SCREEN_HEIGHT(SCREEN_HEIGHT), 
+    .GOAL_DEPTH(60),
+    .GOAL_DEPTH_DELTA(10),
+    .MAX_WALL_DEPTH(60+10+5),
+    .MAX_FRAMES_PER_WALL_TICK(15), // slowest speed of wall movement
+    .BIT_MASK_DOWN_SAMPLE_FACTOR(16)
+  ) game_controller (
+    .clk_in(clk_pixel),
+    .rst_in(sys_rst_game_logic),
+    .sw(sw),
+    .hcount_in(hcount_hdmi),
+    .vcount_in(vcount_hdmi),
+    .data_valid_in(!hsync_hdmi && !vsync_hdmi),
+    .is_person_in(!mask),
+    .player_depth_in(), // TODO: fill in
+    .hcount_out(),
+    .vcount_out(),
+    .data_valid_out(),
+    .wall_depth_out(wall_depth),
+    .player_depth_out(),
+    .is_wall_out(pixel_is_wall),
+    .is_person_out(),
+    .is_collision_out(pixel_is_collision),
+    .game_state(game_state)
+  );
 
   //============================================================================
   // Graphics Pipeline
@@ -561,9 +567,9 @@ module top_level
     .rst_in(sys_rst_pixel),
     .h_count_in(hcount_hdmi),
     .v_count_in(vcount_hdmi),
-    .wall_depth(8'b0),
+    .wall_depth(wall_depth),
     .player_depth(8'b0),
-    .is_wall(sw[15]),
+    .is_wall(sw[15] ? 1'b1 : pixel_is_wall),
     .wall_color(16'hf000), //red
     .pixel_in({graphics_red, graphics_green, graphics_blue}),
     .pixel_out({red, green, blue})

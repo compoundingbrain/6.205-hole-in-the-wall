@@ -28,7 +28,6 @@ async def do_setup(dut):
     dut.rst_in.value = 1
     dut.hcount_in.value = 0
     dut.vcount_in.value = 0
-    dut.pixel_in.value = 0
     dut.data_valid_in.value = 0
     dut.is_person_in.value = 0
     dut.player_depth_in.value = 0
@@ -59,7 +58,6 @@ async def test_a(dut):
                 for x in range(SCREEN_WIDTH):
                     dut.hcount_in.value = x
                     dut.vcount_in.value = y
-                    dut.pixel_in.value = 0
                     dut.data_valid_in.value = 1
                     dut.is_person_in.value = 1
                     dut.player_depth_in.value = 0

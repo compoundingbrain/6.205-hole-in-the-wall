@@ -17,7 +17,6 @@ module game_logic_controller #(
 
     input  wire [10:0]         hcount_in,
     input  wire [9:0]          vcount_in,
-    input  wire [15:0]         pixel_in,
     input  wire                data_valid_in,
 
     input  wire                is_person_in,
@@ -25,7 +24,6 @@ module game_logic_controller #(
 
     output logic [10:0]        hcount_out,
     output logic [9:0]         vcount_out,
-    output logic [15:0]        pixel_out,
     output logic               data_valid_out,
 
     output logic [7:0]         wall_depth_out,
@@ -43,7 +41,7 @@ module game_logic_controller #(
     assign new_frame = (hcount_in == SCREEN_WIDTH - 1 && vcount_in == SCREEN_HEIGHT - 1 && data_valid_in);
 
     // Wall and collision info
-    logic curr_wall_idx;
+    logic [3:0] curr_wall_idx;
     logic [6:0] bitmask_x;
     logic [5:0] bitmask_y;
     logic is_wall;
@@ -129,6 +127,7 @@ module game_logic_controller #(
             if (new_round_pulse) begin
                 // New round
                 curr_round <= curr_round + 1;
+                curr_wall_idx <= (curr_wall_idx == 9) ? 0 : curr_wall_idx + 1;
             end
 
             if (data_valid_in &&
@@ -147,7 +146,6 @@ module game_logic_controller #(
 
             hcount_out <= hcount_in;
             vcount_out <= vcount_in;
-            pixel_out <= pixel_in;
             data_valid_out <= data_valid_in;
         end
     end
