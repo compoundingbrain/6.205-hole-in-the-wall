@@ -498,7 +498,7 @@ module top_level
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
     .data_valid_in(!hsync_hdmi && !vsync_hdmi),
-    .is_person_in(sw[14] ? 1'b0 : mmask),
+    .is_person_in(sw[14] ? 1'b0 : mask),
     .player_depth_in(player_depth),
     .hcount_out(),
     .vcount_out(),
