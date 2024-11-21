@@ -90,11 +90,10 @@ module game_logic_controller #(
     end
 
     // Wall bit mask: access a new wall bit mask every round
+    logic [BIT_MASK_SIZE-1:0] bit_mask_wall;
     localparam BIT_MASK_WIDTH = SCREEN_WIDTH / BIT_MASK_DOWN_SAMPLE_FACTOR;
     localparam BIT_MASK_HEIGHT = SCREEN_HEIGHT / BIT_MASK_DOWN_SAMPLE_FACTOR;
     localparam BIT_MASK_SIZE = BIT_MASK_WIDTH * BIT_MASK_HEIGHT;
-    logic [BIT_MASK_SIZE-1:0] bit_mask_wall;
-    logic bit_mask_wall_valid;
     wall_bit_mask  #(
         .SCREEN_WIDTH(SCREEN_WIDTH),
         .SCREEN_HEIGHT(SCREEN_HEIGHT),
@@ -105,9 +104,7 @@ module game_logic_controller #(
         ) wall_bit_mask_storage (
         .clk_in(clk_in),
         .rst_in(rst_in),
-        .valid_in(new_round_pulse),
         .bitmask_idx(curr_wall_idx),
-        .valid_out(bit_mask_wall_valid),
         .wall_bit_mask(bit_mask_wall)
     ); 
 
