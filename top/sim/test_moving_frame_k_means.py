@@ -24,6 +24,7 @@ async def test_one_player(dut):
     await ClockCycles(dut.clk_in,5)
     dut.rst_in.value = 0
     await RisingEdge(dut.clk_in)
+    dut.num_players.value = 0
 
     # Go through all values from 0 to 1280 and 0 to 720 and randomly assign it value_in 1 or 0
     # keep internal track of the center of mass for comparison
@@ -44,15 +45,15 @@ async def test_one_player(dut):
             await ClockCycles(dut.clk_in,1)
 
     dut.tabulate_in.value = 1
-    await RisingEdge(dut.valid_out)
+    await with_timeout(RisingEdge(dut.valid_out), 1000000, "ns")
     dut.tabulate_in.value = 0
     
     expected_x = x_sum // total
     expected_y = y_sum // total
 
     assert dut.valid_out.value == 1, f"Expected valid_out to be 1, got {dut.valid_out.value}"
-    assert dut.x_out[0].value == expected_x, f"Expected x_out[0] to be {expected_x}, got {dut.x_out.value}"
-    assert dut.y_out[0].value == expected_y, f"Expected y_out[0] to be {expected_y}, got {dut.y_out.value}"
+    assert dut.x_out[0].value == expected_x, f"Expected x_out[0] to be {expected_x}, got {dut.x_out[0].value.integer}"
+    assert dut.y_out[0].value == expected_y, f"Expected y_out[0] to be {expected_y}, got {dut.y_out[0].value.integer}"
 
     
 def is_runner():
