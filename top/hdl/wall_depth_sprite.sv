@@ -4,7 +4,7 @@ module wall_depth_sprite #(
   parameter GOAL_DEPTH=60, GOAL_DEPTH_DELTA=10, MAX_WALL_DEPTH=75,
   parameter X=800, Y=100,
   parameter WIDTH=MAX_WALL_DEPTH * 4, HEIGHT=20,
-  parameter WALL_COLOR=23'hF000, BAR_WIDTH=5) 
+  parameter WALL_COLOR=24'hFF0080, BAR_WIDTH=5) 
 (
   input wire clk_in,
   input wire rst_in,
@@ -21,7 +21,7 @@ module wall_depth_sprite #(
 
   // Scale pixel depth down by 4 when comparing to wall/player so that
   // entire wall depth graphics component is scaled 4x wide
-  logic pixel_depth;
+  logic [7:0] pixel_depth;
   assign pixel_depth = (hcount_in - X)>>2;
 
   always_comb begin

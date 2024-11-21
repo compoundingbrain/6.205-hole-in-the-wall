@@ -1,7 +1,7 @@
 `default_nettype none
 module graphics_controller #(
     parameter ACTIVE_H_PIXELS = 1280, ACTIVE_LINES = 720,
-    parameter COLLISION_COLOR = 24'h8000, WALL_COLOR = 24'hF000,
+    parameter COLLISION_COLOR = 24'h800000, WALL_COLOR = 24'hFF0080,
     parameter GOAL_DEPTH=60, GOAL_DEPTH_DELTA=10, MAX_WALL_DEPTH=75
 )(
     /*
@@ -28,7 +28,7 @@ module graphics_controller #(
     logic in_wall_depth_sprite;
     wall_depth_sprite #(
         .GOAL_DEPTH(GOAL_DEPTH), .GOAL_DEPTH_DELTA(GOAL_DEPTH_DELTA), .MAX_WALL_DEPTH(MAX_WALL_DEPTH),
-        .X(800), .Y(100),
+        .X(950), .Y(20),
         .WIDTH(MAX_WALL_DEPTH * 4), .HEIGHT(20),
         .WALL_COLOR(WALL_COLOR), .BAR_WIDTH(5)
     ) wds (
