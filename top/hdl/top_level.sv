@@ -476,12 +476,18 @@ module top_level
   logic pixel_is_wall;
   logic pixel_is_collision;
   logic [2:0] game_state;
+
+  // game wall bounds parameters
+  localparam GOAL_DEPTH = 60;
+  localparam GOAL_DEPTH_DELTA = 10; 
+  localparam MAX_WALL_DEPTH = GOAL_DEPTH + GOAL_DEPTH_DELTA +5;
+  
   game_logic_controller #(
     .SCREEN_WIDTH(SCREEN_WIDTH), 
     .SCREEN_HEIGHT(SCREEN_HEIGHT), 
-    .GOAL_DEPTH(60),
-    .GOAL_DEPTH_DELTA(10),
-    .MAX_WALL_DEPTH(60+10+5),
+    .GOAL_DEPTH(GOAL_DEPTH),
+    .GOAL_DEPTH_DELTA(GOAL_DEPTH_DELTA),
+    .MAX_WALL_DEPTH(MAX_WALL_DEPTH),
     .MAX_FRAMES_PER_WALL_TICK(15), // slowest speed of wall movement
     .BIT_MASK_DOWN_SAMPLE_FACTOR(16)
   ) game_controller (
@@ -503,6 +509,7 @@ module top_level
     .is_collision_out(pixel_is_collision),
     .game_state(game_state)
   );
+  // TODO: pipeline signals through game controller
 
   //============================================================================
   // Graphics Pipeline
@@ -561,16 +568,20 @@ module top_level
 
   // Graphics Controller
 
-  graphics_controller #(.ACTIVE_H_PIXELS(1280), .ACTIVE_LINES(720))
+  graphics_controller #(
+    .ACTIVE_H_PIXELS(1280), .ACTIVE_LINES(720),
+    .GOAL_DEPTH(GOAL_DEPTH), .GOAL_DEPTH_DELTA(GOAL_DEPTH_DELTA), .MAX_WALL_DEPTH(MAX_WALL_DEPTH),
+    .WALL_COLOR(24'hFF0080), .COLLISION_COLOR(24'h800000)
+  )
   gc (
     .clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
-    .h_count_in(hcount_hdmi),
-    .v_count_in(vcount_hdmi),
+    .hcount_in(hcount_hdmi),
+    .vcount_in(vcount_hdmi),
     .wall_depth(wall_depth),
     .player_depth(8'b0),
     .is_wall(sw[15] ? 1'b1 : pixel_is_wall),
-    .wall_color(16'hf000), //red
+    .is_collision(sw[14] ? 1'b0 : pixel_is_collision),
     .pixel_in({graphics_red, graphics_green, graphics_blue}),
     .pixel_out({red, green, blue})
   );
