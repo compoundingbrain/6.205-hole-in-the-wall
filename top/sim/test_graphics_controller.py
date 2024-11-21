@@ -16,6 +16,7 @@ ACTIVE_LINES = 720
 @cocotb.test()
 async def test_a(dut):
     """cocotb test for image_sprite"""
+    assert False, "Test bench has not been updated"
     dut._log.info("Starting...")
     cocotb.start_soon(Clock(dut.clk_in, 10, units="ns").start())
     dut.rst_in.value = 0

@@ -110,6 +110,7 @@ module game_logic_controller #(
 
 
     // Game progression logic
+    // TODO: Check player is within bounds
     always_ff @(posedge clk_in) begin
         if (rst_in) begin
             curr_round <= 0;

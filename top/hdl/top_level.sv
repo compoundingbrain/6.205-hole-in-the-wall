@@ -412,7 +412,6 @@ module top_level
   assign cr = {!cr_full[7],cr_full[6:0]};
   assign cb = {!cb_full[7],cb_full[6:0]};
 
-  assign channel_sel = sw[3:1];
   // * 3'b000: green
   // * 3'b001: red
   // * 3'b010: blue
@@ -468,6 +467,8 @@ module top_level
   assign ss1_c = ss_c; //same as above but for lower four digits!
 
 
+  logic [7:0] player_depth; //TODO: connect using parallax
+  assign player_depth = 8'd60;
   //============================================================================
   // Game Logic Pipeline
   //============================================================================
@@ -476,12 +477,18 @@ module top_level
   logic pixel_is_wall;
   logic pixel_is_collision;
   logic [2:0] game_state;
+
+  // game wall bounds parameters
+  localparam GOAL_DEPTH = 60;
+  localparam GOAL_DEPTH_DELTA = 10; 
+  localparam MAX_WALL_DEPTH = GOAL_DEPTH + GOAL_DEPTH_DELTA +5;
+  
   game_logic_controller #(
     .SCREEN_WIDTH(SCREEN_WIDTH), 
     .SCREEN_HEIGHT(SCREEN_HEIGHT), 
-    .GOAL_DEPTH(60),
-    .GOAL_DEPTH_DELTA(10),
-    .MAX_WALL_DEPTH(60+10+5),
+    .GOAL_DEPTH(GOAL_DEPTH),
+    .GOAL_DEPTH_DELTA(GOAL_DEPTH_DELTA),
+    .MAX_WALL_DEPTH(MAX_WALL_DEPTH),
     .MAX_FRAMES_PER_WALL_TICK(15), // slowest speed of wall movement
     .BIT_MASK_DOWN_SAMPLE_FACTOR(16)
   ) game_controller (
@@ -491,8 +498,8 @@ module top_level
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
     .data_valid_in(!hsync_hdmi && !vsync_hdmi),
-    .is_person_in(!mask),
-    .player_depth_in(), // TODO: fill in
+    .is_person_in(sw[14] ? 1'b0 : mask),
+    .player_depth_in(player_depth),
     .hcount_out(),
     .vcount_out(),
     .data_valid_out(),
@@ -503,6 +510,7 @@ module top_level
     .is_collision_out(pixel_is_collision),
     .game_state(game_state)
   );
+  // TODO: pipeline signals through game controller
 
   //============================================================================
   // Graphics Pipeline
@@ -532,8 +540,8 @@ module top_level
   logic [1:0] target_choice;
   logic [7:0] graphics_red, graphics_green, graphics_blue;
 
-  assign display_choice = sw[5:4];
-  assign target_choice =  sw[7:6];
+  assign display_choice = sw[1:0];
+  assign target_choice =  2'b00;//sw[3:2];
 
   //choose what to display from the camera:
   // * 'b00:  normal camera out
@@ -561,16 +569,20 @@ module top_level
 
   // Graphics Controller
 
-  graphics_controller #(.ACTIVE_H_PIXELS(1280), .ACTIVE_LINES(720))
+  graphics_controller #(
+    .ACTIVE_H_PIXELS(1280), .ACTIVE_LINES(720),
+    .GOAL_DEPTH(GOAL_DEPTH), .GOAL_DEPTH_DELTA(GOAL_DEPTH_DELTA), .MAX_WALL_DEPTH(MAX_WALL_DEPTH),
+    .WALL_COLOR(24'hFF0080), .COLLISION_COLOR(24'h800000)
+  )
   gc (
     .clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
-    .h_count_in(hcount_hdmi),
-    .v_count_in(vcount_hdmi),
+    .hcount_in(hcount_hdmi),
+    .vcount_in(vcount_hdmi),
     .wall_depth(wall_depth),
-    .player_depth(8'b0),
-    .is_wall(sw[15] ? 1'b1 : pixel_is_wall),
-    .wall_color(16'hf000), //red
+    .player_depth(player_depth),
+    .is_wall(sw[15] ? 1'b0 : pixel_is_wall),
+    .is_collision(pixel_is_collision),
     .pixel_in({graphics_red, graphics_green, graphics_blue}),
     .pixel_out({red, green, blue})
   );
