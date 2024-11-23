@@ -29,31 +29,37 @@ async def test_one_player(dut):
     # Go through all values from 0 to 1280 and 0 to 720 and randomly assign it value_in 1 or 0
     # keep internal track of the center of mass for comparison
 
-    x_sum = 0
-    y_sum = 0
-    total = 0
+    for num_tests in range(0, 3):
+        x_sum = 0
+        y_sum = 0
+        total = 0
 
-    for j in range(0, ACTIVE_LINES, 4):
-        for i in range(0, ACTIVE_H_PIXELS, 4):
-            dut.x_in.value = i
-            dut.y_in.value = j
-            valid_in = random.randint(0,1)
-            total += valid_in
-            dut.valid_in.value = valid_in
-            x_sum += valid_in * i
-            y_sum += valid_in * j
-            await ClockCycles(dut.clk_in,1)
+        for j in range(0, ACTIVE_LINES, 4):
+            for i in range(0, ACTIVE_H_PIXELS, 4):
+                dut.x_in.value = i
+                dut.y_in.value = j
+                valid_in = random.randint(0,1)
+                total += valid_in
+                dut.valid_in.value = valid_in
+                x_sum += valid_in * i
+                y_sum += valid_in * j
+                await ClockCycles(dut.clk_in,1)
 
-    dut.tabulate_in.value = 1
-    await with_timeout(RisingEdge(dut.valid_out), 1000000, "ns")
-    dut.tabulate_in.value = 0
-    
-    expected_x = x_sum // total
-    expected_y = y_sum // total
+        dut.tabulate_in.value = 1
+        dut.valid_in.value = 0
+        await with_timeout(RisingEdge(dut.valid_out), 100000, "ns")
+        await ClockCycles(dut.clk_in,1)
+        dut.tabulate_in.value = 0
+        
+        expected_x = x_sum // total
+        expected_y = y_sum // total
 
-    assert dut.valid_out.value == 1, f"Expected valid_out to be 1, got {dut.valid_out.value}"
-    assert dut.x_out[0].value == expected_x, f"Expected x_out[0] to be {expected_x}, got {dut.x_out[0].value.integer}"
-    assert dut.y_out[0].value == expected_y, f"Expected y_out[0] to be {expected_y}, got {dut.y_out[0].value.integer}"
+        assert dut.valid_out.value == 1, f"Expected valid_out to be 1, got {dut.valid_out.value} on trial {num_tests}"
+        assert dut.x_out[0].value == expected_x, f"Expected x_out[0] to be {expected_x}, got {dut.x_out[0].value.integer} on trial {num_tests}"
+        assert dut.y_out[0].value == expected_y, f"Expected y_out[0] to be {expected_y}, got {dut.y_out[0].value.integer} on trial {num_tests}"
+
+        await ClockCycles(dut.clk_in,1)
+        assert dut.valid_out.value == 0
 
     
 def is_runner():
