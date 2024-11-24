@@ -15,6 +15,12 @@ module moving_frame_k_means (
   output logic [9:0] y_out [3:0], // make this 4 wide for 4 players
   output logic valid_out // make this 4 wide for 4 players
 );
+
+  localparam ONE_PLAYER = 2'b00;
+  localparam TWO_PLAYERS = 2'b01;
+  localparam THREE_PLAYERS = 2'b10;
+  localparam FOUR_PLAYERS = 2'b11;
+
   // pipelined valid_out
   logic [3:0] pipe_valid_out;
 
@@ -62,17 +68,17 @@ module moving_frame_k_means (
     min_dist = manhattan_distance_1;
     closest_centroid = 2'b00;
 
-    if (num_players >= 2 && manhattan_distance_2 < min_dist) begin
+    if (num_players >= TWO_PLAYERS && manhattan_distance_2 < min_dist) begin
       min_dist = manhattan_distance_2;
       closest_centroid = 2'b01;
     end
 
-    if (num_players >= 3 && manhattan_distance_3 < min_dist) begin
+    if (num_players >= THREE_PLAYERS && manhattan_distance_3 < min_dist) begin
       min_dist = manhattan_distance_3;
       closest_centroid = 2'b10;
     end
 
-    if (num_players >= 4 && manhattan_distance_4 < min_dist) begin
+    if (num_players >= FOUR_PLAYERS && manhattan_distance_4 < min_dist) begin
       min_dist = manhattan_distance_4;
       closest_centroid = 2'b11;
     end
