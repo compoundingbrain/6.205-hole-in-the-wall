@@ -20,7 +20,7 @@ module graphics_controller #(
     input wire is_wall,
     input wire is_collision,
     input wire [23:0] pixel_in,
-    input wire [2:0] game_state_in
+    input wire [2:0] game_state_in,
 
     output logic [23:0] pixel_out
 );

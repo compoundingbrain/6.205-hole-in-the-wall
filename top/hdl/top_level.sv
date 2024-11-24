@@ -741,8 +741,7 @@ module top_level
   assign led[0] = 0;
   assign led[1] = cr_init_valid;
   assign led[2] = cr_init_ready;
-  assign led[15:8] = wall_depth;
-  assign led[7:3] = 0;
+  assign led[15:3] = 0;
 
 endmodule // top_level
 
