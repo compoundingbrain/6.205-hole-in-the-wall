@@ -13,10 +13,12 @@ from cocotb.runner import get_runner, Verilog
 
 SCREEN_WIDTH = 3
 SCREEN_HEIGHT = 3
+HSYNC = 1
+VSYNC = 1
 GOAL_DEPTH = 3
 GOAL_DEPTH_DELTA = 1
 MAX_WALL_DEPTH = 5
-MAX_FRAMES_PER_WALL_TICK = 1
+MAX_FRAMES_PER_WALL_TICK = 15
 BIT_MASK_DOWN_SAMPLE_FACTOR = 1
 
 async def do_setup(dut):
@@ -52,8 +54,8 @@ await ClockCycles(dut.clk_in, 1000) #wait a few clock cycles
 async def test_a(dut):
     await do_setup(dut)
 
-    for round in range(2):
-        for frame in range(5):
+    for round in range(1):
+        for frame in range(100):
             for y in range(SCREEN_HEIGHT):
                 for x in range(SCREEN_WIDTH):
                     dut.hcount_in.value = x
@@ -62,7 +64,25 @@ async def test_a(dut):
                     dut.is_person_in.value = 1
                     dut.player_depth_in.value = 0
                     await FallingEdge(dut.clk_in)  
-                    #TODO: Test with hsync/vsync  
+                
+                # Hsync
+                for x in range(SCREEN_WIDTH, SCREEN_WIDTH + HSYNC):
+                    dut.hcount_in.value = x
+                    dut.vcount_in.value = y
+                    dut.data_valid_in.value = 1
+                    dut.is_person_in.value = 0
+                    dut.player_depth_in.value = 0
+                    await FallingEdge(dut.clk_in)
+            # Vsync
+            for y in range(SCREEN_HEIGHT, SCREEN_HEIGHT + VSYNC):
+                for x in range(SCREEN_WIDTH+HSYNC):
+                    dut.hcount_in.value = x
+                    dut.vcount_in.value = y
+                    dut.data_valid_in.value = 1
+                    dut.is_person_in.value = 0
+                    dut.player_depth_in.value = 0
+                    await FallingEdge(dut.clk_in)
+
 
 def test_runner():
     """Simulate the counter using the Python runner."""

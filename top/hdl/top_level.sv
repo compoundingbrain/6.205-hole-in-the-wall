@@ -497,7 +497,7 @@ module top_level
     .sw(sw),
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
-    .data_valid_in(!hsync_hdmi && !vsync_hdmi),
+    .data_valid_in(1'b1),//!hsync_hdmi && !vsync_hdmi),
     .is_person_in(sw[14] ? 1'b0 : mask),
     .player_depth_in(player_depth),
     .hcount_out(),
@@ -584,6 +584,7 @@ module top_level
     .is_wall(sw[15] ? 1'b0 : pixel_is_wall),
     .is_collision(pixel_is_collision),
     .pixel_in({graphics_red, graphics_green, graphics_blue}),
+    .game_state_in(game_state),
     .pixel_out({red, green, blue})
   );
 
@@ -740,7 +741,8 @@ module top_level
   assign led[0] = 0;
   assign led[1] = cr_init_valid;
   assign led[2] = cr_init_ready;
-  assign led[15:3] = 0;
+  assign led[15:8] = wall_depth;
+  assign led[7:3] = 0;
 
 endmodule // top_level
 
