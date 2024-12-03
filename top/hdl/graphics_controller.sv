@@ -20,6 +20,7 @@ module graphics_controller #(
     input wire is_wall,
     input wire is_collision,
     input wire [23:0] pixel_in,
+    input wire [2:0] game_state_in,
 
     output logic [23:0] pixel_out
 );
@@ -42,15 +43,33 @@ module graphics_controller #(
         .in_sprite(in_wall_depth_sprite)
     );
 
+    logic [23:0] game_over_sprite_pixel;
+    game_over_sprite #(
+        .SCREEN_WIDTH(ACTIVE_H_PIXELS), .SCREEN_HEIGHT(ACTIVE_LINES), .SCREEN_COLOR(COLLISION_COLOR)
+    ) gos (
+        .clk_in(clk_in),
+        .rst_in(rst_in),
+        .hcount_in(hcount_in),
+        .vcount_in(vcount_in),
+        .pixel_out(game_over_sprite_pixel)
+    );
+
     always_comb begin
         if (!rst_in && hcount_in < ACTIVE_H_PIXELS && vcount_in < ACTIVE_LINES) begin  
-            if (in_wall_depth_sprite) begin
+            if (game_state_in == 0) begin
+                // Game over screen
+                pixel_out = game_over_sprite_pixel;
+            end else if (in_wall_depth_sprite) begin
+                // Wall depth sprite
                 pixel_out = wall_depth_sprite_pixel;
             end else if (is_collision) begin
+                // Collision
                 pixel_out = COLLISION_COLOR;
             end else if (is_wall) begin
+                // Wall
                 pixel_out = WALL_COLOR;
             end else begin
+                // Video stream
                 pixel_out = pixel_in;
             end
         end

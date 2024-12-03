@@ -48,7 +48,9 @@ module game_logic_controller #(
     logic is_collision;
     assign bitmask_x = hcount_in[10:4];
     assign bitmask_y = vcount_in[9:4];
-    assign is_wall = bit_mask_wall[bitmask_x + (bitmask_y * BIT_MASK_WIDTH)];
+    // TODO: Bit masks get pulled from BRAM in reverse so we need to flip the indices but
+    //       it would be more efficient to just have the python script store them in reverse
+    assign is_wall = bit_mask_wall[(BIT_MASK_WIDTH - 1 - bitmask_x) + ((BIT_MASK_HEIGHT - 1 - bitmask_y) * BIT_MASK_WIDTH)];
     assign is_collision = is_person_in && is_wall;
 
     // Move wall forward one inch every `wall_tick_frequency` frames
@@ -71,23 +73,6 @@ module game_logic_controller #(
         .evt_in(wall_tick_pulse),
         .count_out(wall_depth)
     );
-    always_ff @(posedge clk_in) begin
-        if (wall_tick_pulse) begin
-            wall_tick_pulse <= 0;
-        end
-        else if(wall_tick_count == wall_tick_frequency) begin
-            wall_tick_pulse <= 1;
-        end 
-
-        if (new_round_pulse) begin
-            new_round_pulse <= 0;
-            wall_depth_rst <= 0;
-        end
-        else if(wall_depth == MAX_WALL_DEPTH - 1) begin
-            new_round_pulse <= 1;
-            wall_depth_rst <= 1;
-        end
-    end
 
     // Wall bit mask: access a new wall bit mask every round
     logic [BIT_MASK_SIZE-1:0] bit_mask_wall;
@@ -112,6 +97,23 @@ module game_logic_controller #(
     // Game progression logic
     // TODO: Check player is within bounds
     always_ff @(posedge clk_in) begin
+
+        if (wall_tick_pulse) begin
+            wall_tick_pulse <= 0;
+        end
+        else if(wall_tick_count == wall_tick_frequency) begin
+            wall_tick_pulse <= 1;
+        end 
+
+        if (new_round_pulse) begin
+            new_round_pulse <= 0;
+            wall_depth_rst <= 0;
+        end
+        else if(wall_tick_pulse && wall_depth == MAX_WALL_DEPTH - 1) begin
+            new_round_pulse <= 1;
+            wall_depth_rst <= 1;
+        end
+
         if (rst_in) begin
             curr_round <= 0;
             curr_wall_idx <= 0;
