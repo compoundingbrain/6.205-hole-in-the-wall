@@ -18,6 +18,7 @@ module graphics_controller #(
     input wire [1:0] pixel_player_num,
     input wire [7:0] wall_depth,
     input wire [7:0] player_depth,
+    input wire is_player,
     input wire is_wall,
     input wire is_collision,
     input wire [23:0] pixel_in,
@@ -69,6 +70,14 @@ module graphics_controller #(
             end else if (is_wall) begin
                 // Wall
                 pixel_out = WALL_COLOR;
+            end else if (is_player) begin
+                // Players  
+                case (pixel_player_num)
+                    0: pixel_out = 24'h0000FF;
+                    1: pixel_out = 24'hFFFF00;
+                    2: pixel_out = 24'h00FF00;
+                    3: pixel_out = 24'hFFAA00;
+                endcase
             end else begin
                 // Video stream
                 pixel_out = pixel_in;

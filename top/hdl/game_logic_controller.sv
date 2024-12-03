@@ -42,15 +42,15 @@ module game_logic_controller #(
 
     // Wall and collision info
     logic [3:0] curr_wall_idx;
-    logic [6:0] bitmask_x;
-    logic [5:0] bitmask_y;
+    logic [6:0] bitmask_x, pipe_bitmask_x;
+    logic [5:0] bitmask_y, pipe_bitmask_y;
     logic is_wall;
     logic is_collision;
     assign bitmask_x = hcount_in[10:4];
     assign bitmask_y = vcount_in[9:4];
     // TODO: Bit masks get pulled from BRAM in reverse so we need to flip the indices but
     //       it would be more efficient to just have the python script store them in reverse
-    assign is_wall = bit_mask_wall[(BIT_MASK_WIDTH - 1 - bitmask_x) + ((BIT_MASK_HEIGHT - 1 - bitmask_y) * BIT_MASK_WIDTH)];
+    assign is_wall = bit_mask_wall[pipe_bitmask_x + pipe_bitmask_y];
     assign is_collision = is_person_in && is_wall;
 
     // Move wall forward one inch every `wall_tick_frequency` frames
@@ -97,6 +97,9 @@ module game_logic_controller #(
     // Game progression logic
     // TODO: Check player is within bounds
     always_ff @(posedge clk_in) begin
+
+        pipe_bitmask_x <= BIT_MASK_WIDTH - 1 - bitmask_x;
+        pipe_bitmask_y <= (BIT_MASK_HEIGHT - 1 - bitmask_y) * BIT_MASK_WIDTH;
 
         if (wall_tick_pulse) begin
             wall_tick_pulse <= 0;

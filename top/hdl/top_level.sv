@@ -15,6 +15,8 @@ module top_level
   inout wire          i2c_scl, // i2c inout clock
   inout wire          i2c_sda, // i2c inout data
   input wire [15:0]   sw,
+  input wire [2:0]    rgb0,
+  input wire [2:0]    rgb1,
   input wire [3:0]    btn,
   input wire [1:0]    pmodb,
   // seven segment
@@ -42,6 +44,8 @@ module top_level
   output wire [1:0]  ddr3_dm,
   output wire        ddr3_odt
 );
+  assign rgb0 = 0;
+  assign rgb1 = 0;
 
   localparam SCREEN_WIDTH = 1280;
   localparam SCREEN_HEIGHT = 720;
@@ -686,10 +690,11 @@ module top_level
     .pixel_player_num(pixel_player_num),
     .wall_depth(wall_depth),
     .player_depth(player_depth),
+    .is_player(pixel_is_player),
     .is_wall(sw[15] ? 1'b0 : pixel_is_wall),
     .is_collision(pixel_is_collision),
     .pixel_in({graphics_red, graphics_green, graphics_blue}),
-    .game_state_in(game_state),
+    .game_state_in(sw[13] ? 1'b1 : game_state),
     .pixel_out({red, green, blue})
   );
 `endif
