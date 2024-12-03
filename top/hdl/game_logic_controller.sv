@@ -42,15 +42,13 @@ module game_logic_controller #(
 
     // Wall and collision info
     logic [3:0] curr_wall_idx;
-    logic [6:0] bitmask_x, pipe_bitmask_x;
-    logic [5:0] bitmask_y, pipe_bitmask_y;
+    logic[$clog2(BIT_MASK_WIDTH):0] bitmask_x; // index into wall bit mask computed over 2 cycles
+    logic [$clog2(BIT_MASK_HEIGHT)*2:0] bitmask_y;
     logic is_wall;
     logic is_collision;
-    assign bitmask_x = hcount_in[10:4];
-    assign bitmask_y = vcount_in[9:4];
     // TODO: Bit masks get pulled from BRAM in reverse so we need to flip the indices but
     //       it would be more efficient to just have the python script store them in reverse
-    assign is_wall = bit_mask_wall[pipe_bitmask_x + pipe_bitmask_y];
+    assign is_wall = bit_mask_wall[bitmask_x + bitmask_y] && data_valid_in;
     assign is_collision = is_person_in && is_wall;
 
     // Move wall forward one inch every `wall_tick_frequency` frames
@@ -98,9 +96,6 @@ module game_logic_controller #(
     // TODO: Check player is within bounds
     always_ff @(posedge clk_in) begin
 
-        pipe_bitmask_x <= BIT_MASK_WIDTH - 1 - bitmask_x;
-        pipe_bitmask_y <= (BIT_MASK_HEIGHT - 1 - bitmask_y) * BIT_MASK_WIDTH;
-
         if (wall_tick_pulse) begin
             wall_tick_pulse <= 0;
         end
@@ -119,12 +114,14 @@ module game_logic_controller #(
 
         if (rst_in) begin
             curr_round <= 0;
-            curr_wall_idx <= 0;
+            curr_wall_idx <= 1;
             wall_tick_frequency <= MAX_FRAMES_PER_WALL_TICK;
             wall_depth_rst <= 0;
             new_round_pulse <= 0;
             wall_tick_pulse <= 0;
-            game_state <= 1;
+            game_state <= 1;     
+            bitmask_x <= 0;
+            bitmask_y <= 0;
             
         end else begin
             if (new_round_pulse) begin
@@ -140,6 +137,9 @@ module game_logic_controller #(
                 // Pixel collision
                 game_state <= 0;
             end
+
+            bitmask_x <= BIT_MASK_WIDTH - 1 - hcount_in[10:$clog2(BIT_MASK_DOWN_SAMPLE_FACTOR)];
+            bitmask_y <= (BIT_MASK_HEIGHT - 1 - vcount_in[9:$clog2(BIT_MASK_DOWN_SAMPLE_FACTOR)]) * BIT_MASK_WIDTH;
 
             is_wall_out <= is_wall;
             is_person_out <= is_person_in;

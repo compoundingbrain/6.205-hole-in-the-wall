@@ -596,7 +596,7 @@ module top_level
     .sw(sw),
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
-    .data_valid_in(1'b1),//!hsync_hdmi && !vsync_hdmi),
+    .data_valid_in(active_draw_hdmi),
     .is_person_in(sw[14] ? 1'b0 : pixel_is_player),
     .player_depth_in(player_depth),
     .hcount_out(),

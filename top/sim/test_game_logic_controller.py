@@ -69,7 +69,7 @@ async def test_a(dut):
                 for x in range(SCREEN_WIDTH, SCREEN_WIDTH + HSYNC):
                     dut.hcount_in.value = x
                     dut.vcount_in.value = y
-                    dut.data_valid_in.value = 1
+                    dut.data_valid_in.value = 0
                     dut.is_person_in.value = 0
                     dut.player_depth_in.value = 0
                     await FallingEdge(dut.clk_in)
@@ -78,7 +78,7 @@ async def test_a(dut):
                 for x in range(SCREEN_WIDTH+HSYNC):
                     dut.hcount_in.value = x
                     dut.vcount_in.value = y
-                    dut.data_valid_in.value = 1
+                    dut.data_valid_in.value = 0
                     dut.is_person_in.value = 0
                     dut.player_depth_in.value = 0
                     await FallingEdge(dut.clk_in)
