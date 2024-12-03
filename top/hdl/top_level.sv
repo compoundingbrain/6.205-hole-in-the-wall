@@ -469,6 +469,49 @@ module top_level
 
   logic [7:0] player_depth; //TODO: connect using parallax
   assign player_depth = 8'd60;
+
+  // Kmeans outputs
+  logic valid_out;
+  logic [10:0] x_out [3:0];
+  logic [9:0] y_out [3:0];
+  logic [10:0] last_valid_x_out [3:0];
+  logic [9:0] last_valid_y_out [3:0];
+
+  moving_frame_k_means kmeans (
+    .clk_in(clk_pixel),
+    .rst_in(sys_rst_pixel),
+    .x_in(hcount_hdmi),
+    .y_in(vcount_hdmi),
+    .valid_in(sw[14] ? 1'b0 : mask), // is player in mask
+    .tabulate_in(nf_hdmi),
+    .num_players(2'b00), // TODO: Add switches for this. Currently just set to one player
+    .x_out(x_out),
+    .y_out(y_out),
+    .valid_out(valid_out)
+  );
+
+  always_ff @(posedge clk_pixel) begin
+    if (sys_rst_pixel) begin
+      last_valid_x_out[0] <= 0;
+      last_valid_y_out[0] <= 0;
+      last_valid_x_out[1] <= 0;
+      last_valid_y_out[1] <= 0;
+      last_valid_x_out[2] <= 0;
+      last_valid_y_out[2] <= 0;
+      last_valid_x_out[3] <= 0;
+      last_valid_y_out[3] <= 0;
+    end else if (valid_out) begin
+      last_valid_x_out[0] <= x_out[0];
+      last_valid_y_out[0] <= y_out[0];
+      last_valid_x_out[1] <= x_out[1];
+      last_valid_y_out[1] <= y_out[1];
+      last_valid_x_out[2] <= x_out[2];
+      last_valid_y_out[2] = y_out[2];
+      last_valid_x_out[3] <= x_out[3];
+      last_valid_y_out[3] <= y_out[3];
+    end
+  end
+
   //============================================================================
   // Game Logic Pipeline
   //============================================================================
@@ -533,7 +576,6 @@ module top_level
     .fc_out(frame_count_hdmi)
   );
 
-
   // Video Mux: select from the different display modes based on switch values
   //used with switches for display selections
   logic [1:0] display_choice;
@@ -541,7 +583,16 @@ module top_level
   logic [7:0] graphics_red, graphics_green, graphics_blue;
 
   assign display_choice = sw[1:0];
-  assign target_choice =  2'b00;//sw[3:2];
+  assign target_choice =  2'b01; // TODO: change from crosshair //sw[3:2];
+
+  //crosshair output:
+  logic [7:0] ch_red, ch_green, ch_blue;
+
+  always_comb begin
+    ch_red   = ((vcount_hdmi==last_valid_y_out[0]) || (hcount_hdmi==last_valid_x_out[0]))?8'hFF:8'h00;
+    ch_green = ((vcount_hdmi==last_valid_y_out[0]) || (hcount_hdmi==last_valid_x_out[0]))?8'hFF:8'h00;
+    ch_blue  = ((vcount_hdmi==last_valid_y_out[0]) || (hcount_hdmi==last_valid_x_out[0]))?8'hFF:8'h00;
+  end
 
   //choose what to display from the camera:
   // * 'b00:  normal camera out
@@ -562,7 +613,7 @@ module top_level
     .camera_y_in(y), //luminance 
     .channel_in(selected_channel), //current channel being drawn 
     .thresholded_pixel_in(mask), //one bit mask signal
-    .crosshair_in({0, 0, 0}), 
+    .crosshair_in({ch_red, ch_green, ch_blue}), 
     .com_sprite_pixel_in({img_red, img_green, img_blue}), 
     .pixel_out({graphics_red, graphics_green, graphics_blue}) //output to tmds
   );
