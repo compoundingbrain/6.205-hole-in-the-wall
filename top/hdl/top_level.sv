@@ -1,3 +1,4 @@
+`define MAIN
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -15,8 +16,7 @@ module top_level
   inout wire          i2c_sda, // i2c inout data
   input wire [15:0]   sw,
   input wire [3:0]    btn,
-  output logic [2:0]  rgb0,
-  output logic [2:0]  rgb1,
+  input wire [1:0]    pmodb,
   // seven segment
   output logic [3:0]  ss0_an,//anode control for upper four digits of seven-seg display
   output logic [3:0]  ss1_an,//anode control for lower four digits of seven-seg display
@@ -26,7 +26,7 @@ module top_level
   output logic [2:0]  hdmi_tx_p, //hdmi output signals (positives) (blue, green, red)
   output logic [2:0]  hdmi_tx_n, //hdmi output signals (negatives) (blue, green, red)
   output logic        hdmi_clk_p, hdmi_clk_n, //differential hdmi clock
-  // New for week 6: DDR3 ports
+  // DDR3 ports
   inout wire [15:0]  ddr3_dq,
   inout wire [1:0]   ddr3_dqs_n,
   inout wire [1:0]   ddr3_dqs_p,
@@ -45,10 +45,6 @@ module top_level
 
   localparam SCREEN_WIDTH = 1280;
   localparam SCREEN_HEIGHT = 720;
-
-  // shut up those RGBs
-  assign rgb0 = 0;
-  assign rgb1 = 0;
 
   // Clock and Reset Signals: updated for a couple new clocks!
   logic          sys_rst_camera;
@@ -365,7 +361,11 @@ module top_level
   
   assign frame_buff_dram = frame_buff_tvalid ? frame_buff_tdata : 16'h2277;
 
-  // DRAM STUFF ENDS HERE: below here should look familiar from last week!
+  // DRAM STUFF ENDS HERE
+
+  //============================================================================
+  // Color Masking
+  //============================================================================
 
   //split fame_buff into 3 8 bit color channels (5:6:5 adjusted accordingly)
   //remapped frame_buffer outputs with 8 bits for r, g, b
@@ -466,8 +466,68 @@ module top_level
   assign ss0_c = ss_c; //control upper four digit's cathodes!
   assign ss1_c = ss_c; //same as above but for lower four digits!
 
+  //============================================================================
+  // Center of Mass Logic
+  //============================================================================
 
-  logic [7:0] player_depth; //TODO: connect using parallax
+  // TODO: Connect using k-means
+  logic [10:0] com_x; 
+  logic [9:0] com_y;
+
+  // Transmit/Recieve COM via UART
+  localparam UART_BAUD_RATE = 115200;
+`ifdef SECONDARY
+    uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_tx_x_module (
+      .clk_in(clk_pixel),
+      .rst_in(sys_rst_pixel),
+      .data_byte_in(com_x),
+      .trigger_in(nf_hdmi),
+      .busy_out(),
+      .tx_wire_out(pmodb[0])
+    );
+    uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(10)) uart_tx_y_module (
+      .clk_in(clk_pixel),
+      .rst_in(sys_rst_pixel),
+      .data_byte_in(com_y),
+      .trigger_in(nf_hdmi),
+      .busy_out(),
+      .tx_wire_out(pmodb[1])
+    );
+
+`elsif MAIN 
+
+    // Buffer input wires to avoid metastability
+    logic uart_rx_x_buf [1:0];
+    logic uart_rx_y_buf [1:0];
+    always_comb begin
+      uart_rx_x_buf[1] = pmodb[0];
+      uart_rx_x_buf[0] = uart_rx_x_buf[1];
+      uart_rx_y_buf[1] = pmodb[1];
+      uart_rx_y_buf[0] = uart_rx_y_buf[1];
+    end
+
+    logic uart_rx_x_trigger;
+    logic uart_rx_y_trigger;
+    logic [10:0] secondary_com_x;
+    logic [9:0] secondary_com_y;
+    uart_receive #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_rx_x_module (
+      .clk_in(clk_pixel),
+      .rst_in(sys_rst_pixel),
+      .rx_wire_in(uart_rx_x_buf[0]),
+      .new_data_out(uart_rx_x_trigger),
+      .data_byte_out(secondary_com_x)
+    );
+    uart_receive #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(10)) uart_rx_y_module (
+      .clk_in(clk_pixel),
+      .rst_in(sys_rst_pixel),
+      .rx_wire_in(uart_rx_y_buf[0]),
+      .new_data_out(uart_rx_y_trigger),
+      .data_byte_out(secondary_com_y)
+    );
+`endif
+
+  //TODO: connect using parallax
+  logic [7:0] player_depth;
   assign player_depth = 8'd60;
 
   // Kmeans outputs
@@ -525,7 +585,8 @@ module top_level
   localparam GOAL_DEPTH = 60;
   localparam GOAL_DEPTH_DELTA = 10; 
   localparam MAX_WALL_DEPTH = GOAL_DEPTH + GOAL_DEPTH_DELTA +5;
-  
+
+`ifdef MAIN
   game_logic_controller #(
     .SCREEN_WIDTH(SCREEN_WIDTH), 
     .SCREEN_HEIGHT(SCREEN_HEIGHT), 
@@ -554,6 +615,7 @@ module top_level
     .game_state(game_state)
   );
   // TODO: pipeline signals through game controller
+`endif
 
   //============================================================================
   // Graphics Pipeline
@@ -618,8 +680,8 @@ module top_level
     .pixel_out({graphics_red, graphics_green, graphics_blue}) //output to tmds
   );
 
+`ifdef MAIN
   // Graphics Controller
-
   graphics_controller #(
     .ACTIVE_H_PIXELS(1280), .ACTIVE_LINES(720),
     .GOAL_DEPTH(GOAL_DEPTH), .GOAL_DEPTH_DELTA(GOAL_DEPTH_DELTA), .MAX_WALL_DEPTH(MAX_WALL_DEPTH),
@@ -638,9 +700,9 @@ module top_level
     .game_state_in(game_state),
     .pixel_out({red, green, blue})
   );
+`endif
 
   // HDMI Output: just like before!
-
   logic [9:0] tmds_10b [0:2]; //output of each TMDS encoder!
   logic       tmds_signal [2:0]; //output of each TMDS serializer!
 
@@ -798,4 +860,3 @@ endmodule // top_level
 
 
 `default_nettype wire
-
