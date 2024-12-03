@@ -13,7 +13,8 @@ module moving_frame_k_means (
   input wire [1:0] num_players, // num players - 1
   output logic [10:0] x_out [3:0], // make this 4 wide for 4 players
   output logic [9:0] y_out [3:0], // make this 4 wide for 4 players
-  output logic valid_out // make this 4 wide for 4 players
+  output logic valid_out, // make this 4 wide for 4 players
+  output logic [1:0] player_out
 );
 
   localparam ONE_PLAYER = 2'b00;
@@ -57,6 +58,7 @@ module moving_frame_k_means (
 
   // which centroid is closest to the current COM
   logic [1:0] closest_centroid;
+  assign player_out = closest_centroid;
 
   // Calculate the manhattan distance to each centroid, then calculate which is the smallest
   always_comb begin

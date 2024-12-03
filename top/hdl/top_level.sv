@@ -404,7 +404,9 @@ module top_level
   //threshold module (apply masking threshold):
   logic [7:0] lower_threshold;
   logic [7:0] upper_threshold;
-  logic       mask; //Whether or not thresholded pixel is 1 or 0
+  logic       not_green_mask; //Whether or not thresholded pixel is 1 or 0
+  logic       pixel_is_player;
+  assign pixel_is_player = not_green_mask;
 
   //take lower 8 of full outputs.
   // treat cr and cb as signed numbers, invert the MSB to get an unsigned equivalent ( [-128,128) maps to [0,256) )
@@ -447,7 +449,7 @@ module top_level
     .pixel_in(selected_channel),
     .lower_bound_in(lower_threshold),
     .upper_bound_in(upper_threshold),
-    .mask_out(mask) //single bit if pixel within mask.
+    .mask_out(not_green_mask) //single bit if pixel within mask.
   );
 
 
@@ -476,18 +478,20 @@ module top_level
   logic [9:0] y_com_out [3:0];
   logic [10:0] last_valid_x_com_out [3:0];
   logic [9:0] last_valid_y_com_out [3:0];
+  logic [1:0] pixel_player_num;
 
   moving_frame_k_means kmeans (
     .clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
     .x_in(hcount_hdmi),
     .y_in(vcount_hdmi),
-    .valid_in(sw[14] ? 1'b0 : mask), // is player in mask
+    .valid_in(sw[14] ? 1'b0 : pixel_is_player & active_draw_hdmi), // is player in mask
     .tabulate_in(nf_hdmi),
     .num_players(2'b00), // TODO: Add switches for this. Currently just set to one player
     .x_out(x_com_out),
     .y_out(y_com_out),
-    .valid_out(com_valid_out)
+    .valid_out(com_valid_out),
+    .player_out(pixel_player_num)
   );
 
   always_ff @(posedge clk_pixel) begin
@@ -589,7 +593,7 @@ module top_level
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
     .data_valid_in(1'b1),//!hsync_hdmi && !vsync_hdmi),
-    .is_person_in(sw[14] ? 1'b0 : mask),
+    .is_person_in(sw[14] ? 1'b0 : pixel_is_player),
     .player_depth_in(player_depth),
     .hcount_out(),
     .vcount_out(),
@@ -661,7 +665,7 @@ module top_level
     .camera_pixel_in({fb_red, fb_green, fb_blue}), 
     .camera_y_in(y), //luminance 
     .channel_in(selected_channel), //current channel being drawn 
-    .thresholded_pixel_in(mask), //one bit mask signal
+    .thresholded_pixel_in(pixel_is_player), //one bit mask signal
     .crosshair_in({ch_red, ch_green, ch_blue}), 
     .com_sprite_pixel_in({img_red, img_green, img_blue}), 
     .pixel_out({graphics_red, graphics_green, graphics_blue}) //output to tmds
@@ -679,6 +683,7 @@ module top_level
     .rst_in(sys_rst_pixel),
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
+    .pixel_player_num(pixel_player_num),
     .wall_depth(wall_depth),
     .player_depth(player_depth),
     .is_wall(sw[15] ? 1'b0 : pixel_is_wall),

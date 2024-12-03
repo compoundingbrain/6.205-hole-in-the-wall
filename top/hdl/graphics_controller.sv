@@ -15,6 +15,7 @@ module graphics_controller #(
     input wire rst_in,
     input wire [10:0] hcount_in,
     input wire [9:0] vcount_in,
+    input wire [1:0] pixel_player_num,
     input wire [7:0] wall_depth,
     input wire [7:0] player_depth,
     input wire is_wall,
