@@ -470,9 +470,39 @@ module top_level
   // Center of Mass Logic
   //============================================================================
 
-  // TODO: Connect using k-means
-  logic [10:0] com_x; 
-  logic [9:0] com_y;
+  // Kmeans outputs
+  logic com_valid_out;
+  logic [10:0] x_com_out [3:0];
+  logic [9:0] y_com_out [3:0];
+  logic [10:0] last_valid_x_com_out [3:0];
+  logic [9:0] last_valid_y_com_out [3:0];
+
+  moving_frame_k_means kmeans (
+    .clk_in(clk_pixel),
+    .rst_in(sys_rst_pixel),
+    .x_in(hcount_hdmi),
+    .y_in(vcount_hdmi),
+    .valid_in(sw[14] ? 1'b0 : mask), // is player in mask
+    .tabulate_in(nf_hdmi),
+    .num_players(2'b00), // TODO: Add switches for this. Currently just set to one player
+    .x_out(x_com_out),
+    .y_out(y_com_out),
+    .valid_out(com_valid_out)
+  );
+
+  always_ff @(posedge clk_pixel) begin
+    if (sys_rst_pixel) begin
+      for(int i = 0; i < 4; i++) begin
+        last_valid_x_com_out[i] <= 0;
+        last_valid_y_com_out[i] <= 0;
+      end
+    end else if (com_valid_out) begin
+      for(int i = 0; i<4; i++) begin
+        last_valid_x_com_out[i] <= x_com_out[i];
+        last_valid_y_com_out[i] <= y_com_out[i];
+      end
+    end
+  end
 
   // Transmit/Recieve COM via UART
   localparam UART_BAUD_RATE = 115200;
@@ -480,20 +510,19 @@ module top_level
     uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_tx_x_module (
       .clk_in(clk_pixel),
       .rst_in(sys_rst_pixel),
-      .data_byte_in(com_x),
-      .trigger_in(nf_hdmi),
+      .data_byte_in(last_valid_x_com_out[0]),
+      .trigger_in(com_valid_out),
       .busy_out(),
       .tx_wire_out(pmodb[0])
     );
     uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(10)) uart_tx_y_module (
       .clk_in(clk_pixel),
       .rst_in(sys_rst_pixel),
-      .data_byte_in(com_y),
-      .trigger_in(nf_hdmi),
+      .data_byte_in(last_valid_y_com_out[0]),
+      .trigger_in(com_valid_out),
       .busy_out(),
       .tx_wire_out(pmodb[1])
     );
-
 `elsif MAIN 
 
     // Buffer input wires to avoid metastability
@@ -529,48 +558,6 @@ module top_level
   //TODO: connect using parallax
   logic [7:0] player_depth;
   assign player_depth = 8'd60;
-
-  // Kmeans outputs
-  logic valid_out;
-  logic [10:0] x_out [3:0];
-  logic [9:0] y_out [3:0];
-  logic [10:0] last_valid_x_out [3:0];
-  logic [9:0] last_valid_y_out [3:0];
-
-  moving_frame_k_means kmeans (
-    .clk_in(clk_pixel),
-    .rst_in(sys_rst_pixel),
-    .x_in(hcount_hdmi),
-    .y_in(vcount_hdmi),
-    .valid_in(sw[14] ? 1'b0 : mask), // is player in mask
-    .tabulate_in(nf_hdmi),
-    .num_players(2'b00), // TODO: Add switches for this. Currently just set to one player
-    .x_out(x_out),
-    .y_out(y_out),
-    .valid_out(valid_out)
-  );
-
-  always_ff @(posedge clk_pixel) begin
-    if (sys_rst_pixel) begin
-      last_valid_x_out[0] <= 0;
-      last_valid_y_out[0] <= 0;
-      last_valid_x_out[1] <= 0;
-      last_valid_y_out[1] <= 0;
-      last_valid_x_out[2] <= 0;
-      last_valid_y_out[2] <= 0;
-      last_valid_x_out[3] <= 0;
-      last_valid_y_out[3] <= 0;
-    end else if (valid_out) begin
-      last_valid_x_out[0] <= x_out[0];
-      last_valid_y_out[0] <= y_out[0];
-      last_valid_x_out[1] <= x_out[1];
-      last_valid_y_out[1] <= y_out[1];
-      last_valid_x_out[2] <= x_out[2];
-      last_valid_y_out[2] = y_out[2];
-      last_valid_x_out[3] <= x_out[3];
-      last_valid_y_out[3] <= y_out[3];
-    end
-  end
 
   //============================================================================
   // Game Logic Pipeline
@@ -651,9 +638,9 @@ module top_level
   logic [7:0] ch_red, ch_green, ch_blue;
 
   always_comb begin
-    ch_red   = ((vcount_hdmi==last_valid_y_out[0]) || (hcount_hdmi==last_valid_x_out[0]))?8'hFF:8'h00;
-    ch_green = ((vcount_hdmi==last_valid_y_out[0]) || (hcount_hdmi==last_valid_x_out[0]))?8'hFF:8'h00;
-    ch_blue  = ((vcount_hdmi==last_valid_y_out[0]) || (hcount_hdmi==last_valid_x_out[0]))?8'hFF:8'h00;
+    ch_red   = ((vcount_hdmi==last_valid_y_com_out[0]) || (hcount_hdmi==last_valid_x_com_out[0]))?8'hFF:8'h00;
+    ch_green = ((vcount_hdmi==last_valid_y_com_out[0]) || (hcount_hdmi==last_valid_x_com_out[0]))?8'hFF:8'h00;
+    ch_blue  = ((vcount_hdmi==last_valid_y_com_out[0]) || (hcount_hdmi==last_valid_x_com_out[0]))?8'hFF:8'h00;
   end
 
   //choose what to display from the camera:
