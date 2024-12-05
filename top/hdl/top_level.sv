@@ -50,24 +50,6 @@ module top_level
   localparam SCREEN_WIDTH = 1280;
   localparam SCREEN_HEIGHT = 720;
 
-  // Switches
-  logic [1:0] display_choice;
-  assign display_choice = sw[1:0];
-  logic [1:0] num_players; 
-  assign num_players = sw[3:2]; // 2'b00 for 1, 2'b01 for 2, 2'b10 for 3, 2'b11 for 4
-  logic disable_player_tracking;
-  assign disable_player_tracking = sw[14]; // 1 for disable, 0 for enable
-  logic disable_wall;
-  assign disable_wall = sw[15]; // 1 for disable, 0 for enable
-  logic is_game_enabled; // 0 for enabled, 1 for disabled
-  assign is_game_enabled = sw[13];
-  logic [3:0] red_lower;
-  assign red_lower = {2'b00, sw[5:4]};
-  logic [3:0] blue_lower;
-  assign blue_lower = {2'b00, sw[7:6]};
-  logic [3:0] green_upper;
-  assign green_upper = sw[11:8];
-
   // Clock and Reset Signals: updated for a couple new clocks!
   logic          sys_rst_camera;
   logic          sys_rst_pixel;
@@ -424,17 +406,11 @@ module top_level
   //selected_channel could contain any of the six color channels depend on selection
 
   //threshold module (apply masking threshold):
-  logic [7:0] lower_green_threshold;
-  logic [7:0] upper_green_threshold;
-  logic [7:0] lower_red_threshold;
-  logic [7:0] upper_red_threshold;
-  logic [7:0] lower_blue_threshold;
-  logic [7:0] upper_blue_threshold;
+  logic [7:0] lower_threshold;
+  logic [7:0] upper_threshold;
   logic       not_green_mask; //Whether or not thresholded pixel is 1 or 0
-  logic       red_mask;
-  logic       blue_mask;
   logic       pixel_is_player;
-  assign pixel_is_player = not_green_mask & red_mask & blue_mask;
+  assign pixel_is_player = not_green_mask;
 
   //take lower 8 of full outputs.
   // treat cr and cb as signed numbers, invert the MSB to get an unsigned equivalent ( [-128,128) maps to [0,256) )
@@ -463,45 +439,21 @@ module top_level
     .channel_out(selected_channel)
   );
 
-  // Threshold: Looking for not green screen, so low green, higher red and blues
-
   //threshold values used to determine what value  passes:
-  assign lower_green_threshold = {4'b0000,4'b0};
-  assign upper_green_threshold = {green_upper,4'b0};
-  assign lower_red_threshold = {red_lower,4'b0};
-  assign upper_red_threshold = {4'b1111,4'b0};
-  assign lower_blue_threshold = {blue_lower,4'b0};
-  assign upper_blue_threshold = {4'b1111,4'b0};
+  assign lower_threshold = {4'b0000,4'b0};
+  assign upper_threshold = {4'b0100,4'b0};
 
   //Thresholder: Takes in the full selected channedl and
   //based on upper and lower bounds provides a binary mask bit
   // * 1 if selected channel is within the bounds (inclusive)
   // * 0 if selected channel is not within the bounds
-  threshold green_mt(
+  threshold mt(
     .clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
     .pixel_in(selected_channel),
-    .lower_bound_in(lower_green_threshold),
-    .upper_bound_in(upper_green_threshold),
+    .lower_bound_in(lower_threshold),
+    .upper_bound_in(upper_threshold),
     .mask_out(not_green_mask) //single bit if pixel within mask.
-  );
-
-  threshold red_mt(
-    .clk_in(clk_pixel),
-    .rst_in(sys_rst_pixel),
-    .pixel_in(selected_channel),
-    .lower_bound_in(lower_red_threshold),
-    .upper_bound_in(upper_red_threshold),
-    .mask_out(red_mask) //single bit if pixel within mask.
-  );
-
-  threshold blue_mt(
-    .clk_in(clk_pixel),
-    .rst_in(sys_rst_pixel),
-    .pixel_in(selected_channel),
-    .lower_bound_in(lower_blue_threshold),
-    .upper_bound_in(upper_blue_threshold),
-    .mask_out(blue_mask) //single bit if pixel within mask.
   );
 
 
@@ -511,8 +463,8 @@ module top_level
   // special customized version
   lab05_ssc mssc(.clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
-    .lt_in(lower_green_threshold),
-    .ut_in(upper_green_threshold),
+    .lt_in(lower_threshold),
+    .ut_in(upper_threshold),
     .channel_sel_in(channel_sel),
     .cat_out(ss_c),
     .an_out({ss0_an, ss1_an})
@@ -537,9 +489,9 @@ module top_level
     .rst_in(sys_rst_pixel),
     .x_in(hcount_hdmi),
     .y_in(vcount_hdmi),
-    .valid_in(disable_player_tracking ? 1'b0 : pixel_is_player & active_draw_hdmi), // is player in mask
+    .valid_in(sw[14] ? 1'b0 : pixel_is_player & active_draw_hdmi), // is player in mask
     .tabulate_in(nf_hdmi),
-    .num_players(num_players),
+    .num_players(2'b00), // TODO: Add switches for this. Currently just set to one player
     .x_out(x_com_out),
     .y_out(y_com_out),
     .valid_out(com_valid_out),
@@ -644,8 +596,8 @@ module top_level
     .sw(sw),
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
-    .data_valid_in(1'b1),//!hsync_hdmi && !vsync_hdmi),
-    .is_person_in(pixel_is_player),
+    .data_valid_in(active_draw_hdmi),
+    .is_person_in(sw[14] ? 1'b0 : pixel_is_player),
     .player_depth_in(player_depth),
     .hcount_out(),
     .vcount_out(),
@@ -683,52 +635,20 @@ module top_level
 
   // Video Mux: select from the different display modes based on switch values
   //used with switches for display selections
+  logic [1:0] display_choice;
   logic [1:0] target_choice;
   logic [7:0] graphics_red, graphics_green, graphics_blue;
 
+  assign display_choice = sw[1:0];
   assign target_choice =  2'b01; // TODO: change from crosshair //sw[3:2];
 
   //crosshair output:
   logic [7:0] ch_red, ch_green, ch_blue;
-  logic crosshair_valid;
 
   always_comb begin
-    // Initialize colors to zero
-    ch_red   = 8'h00;
-    ch_green = 8'h00;
-    ch_blue  = 8'h00;
-
-    crosshair_valid = 1'b0;
-
-    // Crosshair for centroid 0 - Red
-    if ((vcount_hdmi == last_valid_y_com_out[0]) ||
-        (hcount_hdmi == last_valid_x_com_out[0])) begin
-      ch_red = 8'hFF;
-      crosshair_valid = 1'b1;
-    end
-
-    // Crosshair for centroid 1 - Green
-    if ((vcount_hdmi == last_valid_y_com_out[1]) ||
-        (hcount_hdmi == last_valid_x_com_out[1])) begin
-      ch_green = 8'hFF;
-      crosshair_valid = 1'b1;
-    end
-
-    // Crosshair for centroid 2 - Blue
-    if ((vcount_hdmi == last_valid_y_com_out[2]) ||
-        (hcount_hdmi == last_valid_x_com_out[2])) begin
-      ch_blue = 8'hFF;
-      crosshair_valid = 1'b1;
-    end
-
-    // Crosshair for centroid 3 - White
-    if ((vcount_hdmi == last_valid_y_com_out[3]) ||
-        (hcount_hdmi == last_valid_x_com_out[3])) begin
-      ch_red   = 8'hFF;
-      ch_green = 8'hFF;
-      ch_blue  = 8'hFF;
-      crosshair_valid = 1'b1;
-    end
+    ch_red   = ((vcount_hdmi==last_valid_y_com_out[0]) || (hcount_hdmi==last_valid_x_com_out[0]))?8'hFF:8'h00;
+    ch_green = ((vcount_hdmi==last_valid_y_com_out[0]) || (hcount_hdmi==last_valid_x_com_out[0]))?8'hFF:8'h00;
+    ch_blue  = ((vcount_hdmi==last_valid_y_com_out[0]) || (hcount_hdmi==last_valid_x_com_out[0]))?8'hFF:8'h00;
   end
 
   //choose what to display from the camera:
@@ -750,8 +670,7 @@ module top_level
     .camera_y_in(y), //luminance 
     .channel_in(selected_channel), //current channel being drawn 
     .thresholded_pixel_in(pixel_is_player), //one bit mask signal
-    .crosshair_in(crosshair_valid), 
-    .crosshair_color_in({ch_red, ch_green, ch_blue}),
+    .crosshair_in({ch_red, ch_green, ch_blue}), 
     .com_sprite_pixel_in({img_red, img_green, img_blue}), 
     .pixel_out({graphics_red, graphics_green, graphics_blue}) //output to tmds
   );
@@ -771,10 +690,11 @@ module top_level
     .pixel_player_num(pixel_player_num),
     .wall_depth(wall_depth),
     .player_depth(player_depth),
-    .is_wall(disable_wall ? 1'b0 : pixel_is_wall),
-    .is_collision(disable_player_tracking ? 1'b0 : pixel_is_collision),
+    .is_player(pixel_is_player),
+    .is_wall(sw[15] ? 1'b0 : pixel_is_wall),
+    .is_collision(pixel_is_collision),
     .pixel_in({graphics_red, graphics_green, graphics_blue}),
-    .game_state_in(is_game_enabled ? 1'b1 : game_state),
+    .game_state_in(sw[13] ? 1'b1 : game_state),
     .pixel_out({red, green, blue})
   );
 `endif
