@@ -58,30 +58,42 @@ module moving_frame_k_means (
 
   // which centroid is closest to the current COM
   logic [1:0] closest_centroid;
-  assign player_out = closest_centroid;
+
+  // Pipeline Stage 1 between inputs and the closest centroid logic
+  logic [10:0] x_in_pipe_1;
+  logic [9:0] y_in_pipe_1;
+  logic valid_in_pipe_1;
+  logic tabulate_in_pipe_1;
+  logic [1:0] num_players_pipe_1;
+  always_ff @(posedge clk_in) begin
+    x_in_pipe_1 <= x_in;
+    y_in_pipe_1 <= y_in;
+    valid_in_pipe_1 <= valid_in;
+    tabulate_in_pipe_1 <= tabulate_in;
+    num_players_pipe_1 <= num_players;
+  end
 
   // Calculate the manhattan distance to each centroid, then calculate which is the smallest
-  // NOTE: might have issue with centroids not being pipelined to align with x_in and y_in
   always_comb begin
-    manhattan_distance_1 = ((x_in > centroid_1_x) ? (x_in - centroid_1_x) : (centroid_1_x - x_in)) + ((y_in > centroid_1_y) ? (y_in - centroid_1_y) : (centroid_1_y - y_in));
-    manhattan_distance_2 = ((x_in > centroid_2_x) ? (x_in - centroid_2_x) : (centroid_2_x - x_in)) + ((y_in > centroid_2_y) ? (y_in - centroid_2_y) : (centroid_2_y - y_in));
-    manhattan_distance_3 = ((x_in > centroid_3_x) ? (x_in - centroid_3_x) : (centroid_3_x - x_in)) + ((y_in > centroid_3_y) ? (y_in - centroid_3_y) : (centroid_3_y - y_in));
-    manhattan_distance_4 = ((x_in > centroid_4_x) ? (x_in - centroid_4_x) : (centroid_4_x - x_in)) + ((y_in > centroid_4_y) ? (y_in - centroid_4_y) : (centroid_4_y - y_in));
+    manhattan_distance_1 = ((x_in_pipe_1 > centroid_1_x) ? (x_in_pipe_1 - centroid_1_x) : (centroid_1_x - x_in_pipe_1)) + ((y_in_pipe_1 > centroid_1_y) ? (y_in_pipe_1 - centroid_1_y) : (centroid_1_y - y_in_pipe_1));
+    manhattan_distance_2 = ((x_in_pipe_1 > centroid_2_x) ? (x_in_pipe_1 - centroid_2_x) : (centroid_2_x - x_in_pipe_1)) + ((y_in_pipe_1 > centroid_2_y) ? (y_in_pipe_1 - centroid_2_y) : (centroid_2_y - y_in_pipe_1));
+    manhattan_distance_3 = ((x_in_pipe_1 > centroid_3_x) ? (x_in_pipe_1 - centroid_3_x) : (centroid_3_x - x_in_pipe_1)) + ((y_in_pipe_1 > centroid_3_y) ? (y_in_pipe_1 - centroid_3_y) : (centroid_3_y - y_in_pipe_1));
+    manhattan_distance_4 = ((x_in_pipe_1 > centroid_4_x) ? (x_in_pipe_1 - centroid_4_x) : (centroid_4_x - x_in_pipe_1)) + ((y_in_pipe_1 > centroid_4_y) ? (y_in_pipe_1 - centroid_4_y) : (centroid_4_y - y_in_pipe_1));
 
     min_dist = manhattan_distance_1;
     closest_centroid = 2'b00;
 
-    if (num_players >= TWO_PLAYERS && manhattan_distance_2 < min_dist) begin
+    if (num_players_pipe_1 >= TWO_PLAYERS && manhattan_distance_2 < min_dist) begin
       min_dist = manhattan_distance_2;
       closest_centroid = 2'b01;
     end
 
-    if (num_players >= THREE_PLAYERS && manhattan_distance_3 < min_dist) begin
+    if (num_players_pipe_1 >= THREE_PLAYERS && manhattan_distance_3 < min_dist) begin
       min_dist = manhattan_distance_3;
       closest_centroid = 2'b10;
     end
 
-    if (num_players >= FOUR_PLAYERS && manhattan_distance_4 < min_dist) begin
+    if (num_players_pipe_1 >= FOUR_PLAYERS && manhattan_distance_4 < min_dist) begin
       min_dist = manhattan_distance_4;
       closest_centroid = 2'b11;
     end
@@ -90,13 +102,29 @@ module moving_frame_k_means (
   // Add combinational logic here that will calculate the closest centroid
   // for each pixel doing the manhattan distance
 
+  // PIPELINE STAGE 2
+  logic [10:0] x_in_pipe_2;
+  logic [9:0] y_in_pipe_2;
+  logic valid_in_pipe_2;
+  logic tabulate_in_pipe_2;
+  logic [1:0] closest_centroid_pipe_2;
+  assign player_out = closest_centroid_pipe_2;
+
+  always_ff @(posedge clk_in) begin
+    x_in_pipe_2 <= x_in_pipe_1;
+    y_in_pipe_2 <= y_in_pipe_1;
+    valid_in_pipe_2 <= valid_in_pipe_1;
+    tabulate_in_pipe_2 <= tabulate_in_pipe_1;
+    closest_centroid_pipe_2 <= closest_centroid;  
+  end
+
   center_of_mass com_1(
     .clk_in(clk_in),
     .rst_in(rst_in),
-    .x_in(x_in),
-    .y_in(y_in),
-    .valid_in(valid_in && closest_centroid == 2'b00),
-    .tabulate_in(tabulate_in),
+    .x_in(x_in_pipe_2),
+    .y_in(y_in_pipe_2),
+    .valid_in(valid_in_pipe_2 && closest_centroid_pipe_2 == 2'b00),
+    .tabulate_in(tabulate_in_pipe_2),
     .x_out(x_out_1),
     .y_out(y_out_1),
     .valid_out(pipe_valid_out[0])
@@ -105,10 +133,10 @@ module moving_frame_k_means (
   center_of_mass com_2(
     .clk_in(clk_in),
     .rst_in(rst_in),
-    .x_in(x_in),
-    .y_in(y_in),
-    .valid_in(valid_in && closest_centroid == 2'b01),
-    .tabulate_in(tabulate_in),
+    .x_in(x_in_pipe_2),
+    .y_in(y_in_pipe_2),
+    .valid_in(valid_in_pipe_2 && closest_centroid_pipe_2 == 2'b01),
+    .tabulate_in(tabulate_in_pipe_2),
     .x_out(x_out_2),
     .y_out(y_out_2),
     .valid_out(pipe_valid_out[1])
@@ -117,10 +145,10 @@ module moving_frame_k_means (
   center_of_mass com_3(
     .clk_in(clk_in),
     .rst_in(rst_in),
-    .x_in(x_in),
-    .y_in(y_in),
-    .valid_in(valid_in && closest_centroid == 2'b10),
-    .tabulate_in(tabulate_in),
+    .x_in(x_in_pipe_2),
+    .y_in(y_in_pipe_2),
+    .valid_in(valid_in_pipe_2 && closest_centroid_pipe_2 == 2'b10),
+    .tabulate_in(tabulate_in_pipe_2),
     .x_out(x_out_3),
     .y_out(y_out_3),
     .valid_out(pipe_valid_out[2])
@@ -129,10 +157,10 @@ module moving_frame_k_means (
   center_of_mass com_4(
     .clk_in(clk_in),
     .rst_in(rst_in),
-    .x_in(x_in),
-    .y_in(y_in),
-    .valid_in(valid_in && closest_centroid == 2'b11),
-    .tabulate_in(tabulate_in),
+    .x_in(x_in_pipe_2),
+    .y_in(y_in_pipe_2),
+    .valid_in(valid_in_pipe_2 && closest_centroid_pipe_2 == 2'b11),
+    .tabulate_in(tabulate_in_pipe_2),
     .x_out(x_out_4),
     .y_out(y_out_4),
     .valid_out(pipe_valid_out[3])
