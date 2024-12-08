@@ -487,9 +487,9 @@ module top_level
   assign lower_blue_threshold = {4'b0000,4'b0};
   assign upper_blue_threshold = {blue_upper,4'b0};
   assign lower_cr_threshold = {4'b0000,4'b0};
-  assign upper_cr_threshold = {cr_upper,4'b0};
+  assign upper_cr_threshold = {4'b1001,4'b0};
   assign lower_cb_threshold = {4'b0000,4'b0};
-  assign upper_cb_threshold = {cb_upper,4'b0};
+  assign upper_cb_threshold = {4'b1001,4'b0};
 
   //Thresholder: Takes in the full selected channedl and
   //based on upper and lower bounds provides a binary mask bit
@@ -526,8 +526,8 @@ module top_level
     .clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
     .pixel_in(cr),
-    .lower_bound_in(lower_green_threshold),
-    .upper_bound_in(upper_green_threshold),
+    .lower_bound_in(lower_cr_threshold),
+    .upper_bound_in(upper_cr_threshold),
     .mask_out(cr_mask) //single bit if pixel within mask.
   );
 
@@ -535,8 +535,8 @@ module top_level
     .clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
     .pixel_in(cb),
-    .lower_bound_in(lower_green_threshold),
-    .upper_bound_in(upper_green_threshold),
+    .lower_bound_in(lower_cb_threshold),
+    .upper_bound_in(upper_cb_threshold),
     .mask_out(cb_mask) //single bit if pixel within mask.
   );
 
