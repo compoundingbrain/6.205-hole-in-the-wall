@@ -62,9 +62,10 @@ module top_level
   logic is_game_enabled; // 0 for enabled, 1 for disabled
   assign is_game_enabled = sw[13];
   logic [3:0] red_upper;
-  assign red_upper = {1'b0, sw[5:4], 1'b0};
+  assign red_upper = 0;
   logic [3:0] blue_upper;
-  assign blue_upper = {1'b0, sw[7:6], 1'b0};
+  assign blue_upper = 0;
+  logic [1:0] shift_for_red_and_blue = sw[5:4];
   logic [3:0] green_lower;
   assign green_lower = sw[11:8];
 
@@ -420,7 +421,7 @@ module top_level
 
   //channel select module (select which of six color channels to mask):
   logic [2:0] channel_sel;
-  logic [7:0] selected_channel; //selected channels
+  // logic [7:0] selected_channel; //selected channels
   //selected_channel could contain any of the six color channels depend on selection
 
   //threshold module (apply masking threshold):
@@ -435,7 +436,7 @@ module top_level
   logic       blue_mask;
   logic       is_green_screen;
   logic       is_player;
-  assign is_green_screen = green_mask & red_mask & blue_mask;
+  assign is_green_screen = (green_mask) & (fb_green > (fb_red >> shift_for_red_and_blue)) & (fb_green > (fb_blue >> shift_for_red_and_blue));
   assign is_player = ~is_green_screen;
 
   //take lower 8 of full outputs.
@@ -454,16 +455,16 @@ module top_level
   // * 3'b111: not valid
   //Channel Select: Takes in the full RGB and YCrCb information and
   // chooses one of them to output as an 8 bit value
-  channel_select mcs(
-    .sel_in(3'b000), // for green screen
-    .r_in(fb_red),    
-    .g_in(fb_green),  
-    .b_in(fb_blue),   
-    .y_in(y),
-    .cr_in(cr),
-    .cb_in(cb),
-    .channel_out(selected_channel)
-  );
+  // channel_select green_mcs(
+  //   .sel_in(3'b000), // for green screen
+  //   .r_in(fb_red),    
+  //   .g_in(fb_green),  
+  //   .b_in(fb_blue),   
+  //   .y_in(y),
+  //   .cr_in(cr),
+  //   .cb_in(cb),
+  //   .channel_out(selected_channel)
+  // );
 
   // Threshold: Looking for not green screen, so low green, higher red and blues
 
@@ -482,7 +483,7 @@ module top_level
   threshold green_mt(
     .clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
-    .pixel_in(selected_channel),
+    .pixel_in(fb_green),
     .lower_bound_in(lower_green_threshold),
     .upper_bound_in(upper_green_threshold),
     .mask_out(green_mask) //single bit if pixel within mask.
@@ -491,7 +492,7 @@ module top_level
   threshold red_mt(
     .clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
-    .pixel_in(selected_channel),
+    .pixel_in(fb_red),
     .lower_bound_in(lower_red_threshold),
     .upper_bound_in(upper_red_threshold),
     .mask_out(red_mask) //single bit if pixel within mask.
@@ -500,7 +501,7 @@ module top_level
   threshold blue_mt(
     .clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
-    .pixel_in(selected_channel),
+    .pixel_in(fb_blue),
     .lower_bound_in(lower_blue_threshold),
     .upper_bound_in(upper_blue_threshold),
     .mask_out(blue_mask) //single bit if pixel within mask.
@@ -539,7 +540,7 @@ module top_level
     .rst_in(sys_rst_pixel),
     .x_in(hcount_hdmi),
     .y_in(vcount_hdmi),
-    .valid_in(disable_player_tracking ? 1'b0 : is_player & active_draw_hdmi), // is player in mask
+    .valid_in(is_player & active_draw_hdmi), // is player in mask
     .tabulate_in(nf_hdmi),
     .num_players(num_players),
     .x_out(x_com_out),
@@ -750,7 +751,7 @@ module top_level
     .target_in(target_choice), //choose target
     .camera_pixel_in({fb_red, fb_green, fb_blue}), 
     .camera_y_in(y), //luminance 
-    .channel_in(selected_channel), //current channel being drawn 
+    .channel_in(8'h00), // selected_channel), //current channel being drawn 
     .thresholded_pixel_in(is_green_screen), //one bit mask signal
     .crosshair_in(crosshair_valid), 
     .crosshair_color_in({ch_red, ch_green, ch_blue}),
