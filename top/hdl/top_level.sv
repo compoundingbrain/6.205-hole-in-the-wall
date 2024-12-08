@@ -743,6 +743,14 @@ module top_level
       ch_blue  = 8'hFF;
       crosshair_valid = 1'b1;
     end
+
+    // Crosshair for secondary centroid 1 - Yellow
+    if ((vcount_hdmi == secondary_com_x[0]) ||
+        (hcount_hdmi == secondary_com_x[0])) begin
+      ch_red   = 8'hFF;
+      ch_green = 8'hFF;
+      crosshair_valid = 1'b1;
+    end
   end
 
   //choose what to display from the camera:
