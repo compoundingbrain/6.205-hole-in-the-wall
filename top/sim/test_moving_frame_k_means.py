@@ -62,6 +62,8 @@ async def test_one_player(dut):
         await ClockCycles(dut.clk_in,1)
         assert dut.valid_out.value == 0
 
+        await ClockCycles(dut.clk_in,200)
+
 def manhattan_distance(x1, y1, x2, y2):
     return abs(x1 - x2) + abs(y1 - y2)
 
@@ -135,6 +137,9 @@ async def test_two_players(dut):
         await ClockCycles(dut.clk_in,1)
         assert dut.valid_out.value == 0
         await ClockCycles(dut.clk_in,4)
+    
+        await ClockCycles(dut.clk_in,200)
+
 
 @cocotb.test()
 async def test_three_players(dut):
@@ -223,6 +228,8 @@ async def test_three_players(dut):
         await ClockCycles(dut.clk_in,1)
         assert dut.valid_out.value == 0
         await ClockCycles(dut.clk_in,4)
+
+        await ClockCycles(dut.clk_in,200)
 
 @cocotb.test()
 async def test_four_players(dut):
@@ -326,6 +333,8 @@ async def test_four_players(dut):
         await ClockCycles(dut.clk_in,1)
         assert dut.valid_out.value == 0
         await ClockCycles(dut.clk_in,4)
+
+        await ClockCycles(dut.clk_in,200)
 
 @cocotb.test()
 async def test_changing_players(dut):
@@ -432,6 +441,8 @@ async def test_changing_players(dut):
         await ClockCycles(dut.clk_in,1)
         assert dut.valid_out.value == 0
         await ClockCycles(dut.clk_in,4)
+
+        await ClockCycles(dut.clk_in,200)
 
 
 

@@ -61,6 +61,7 @@ module moving_frame_k_means (
   assign player_out = closest_centroid;
 
   // Calculate the manhattan distance to each centroid, then calculate which is the smallest
+  // NOTE: might have issue with centroids not being pipelined to align with x_in and y_in
   always_comb begin
     manhattan_distance_1 = ((x_in > centroid_1_x) ? (x_in - centroid_1_x) : (centroid_1_x - x_in)) + ((y_in > centroid_1_y) ? (y_in - centroid_1_y) : (centroid_1_y - y_in));
     manhattan_distance_2 = ((x_in > centroid_2_x) ? (x_in - centroid_2_x) : (centroid_2_x - x_in)) + ((y_in > centroid_2_y) ? (y_in - centroid_2_y) : (centroid_2_y - y_in));
