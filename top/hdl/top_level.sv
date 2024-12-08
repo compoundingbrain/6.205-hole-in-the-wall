@@ -1,4 +1,4 @@
-`define MAIN
+`define SECONDARY
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -562,8 +562,11 @@ module top_level
 
   // Transmit/Recieve COM via UART
   localparam UART_BAUD_RATE = 115200;
+  logic [3:0] uart_rx_x_trigger;
+  logic [3:0] uart_rx_y_trigger;
+  logic [10:0] secondary_com_x [3:0];
+  logic [10:0] secondary_com_y [3:0];
 `ifdef SECONDARY
-
   genvar i;
   generate
     for (i = 0; i < 4; i++) begin
@@ -599,11 +602,6 @@ module top_level
         uart_rx_y_buf[i][0] = uart_rx_y_buf[i][1];
       end
     end
-
-    logic [3:0] uart_rx_x_trigger;
-    logic [3:0] uart_rx_y_trigger;
-    logic [10:0] secondary_com_x [3:0];
-    logic [10:0] secondary_com_y [3:0];
     genvar i;
     generate
       for (i = 0; i < 4; i++) begin
@@ -744,15 +742,13 @@ module top_level
       crosshair_valid = 1'b1;
     end
 
-`ifdef MAIN
     // Crosshair for secondary centroid 1 - Yellow
-    if ((vcount_hdmi == secondary_com_x[0]) ||
+    if ((vcount_hdmi == secondary_com_y[0]) ||
         (hcount_hdmi == secondary_com_x[0])) begin
       ch_red   = 8'hFF;
       ch_green = 8'hFF;
       crosshair_valid = 1'b1;
     end
-`endif
   end
 
   //choose what to display from the camera:
