@@ -562,10 +562,8 @@ module top_level
 
   // Transmit/Recieve COM via UART
   localparam UART_BAUD_RATE = 115200;
-  logic [3:0] uart_rx_x_trigger;
-  logic [3:0] uart_rx_y_trigger;
   logic [10:0] secondary_com_x [3:0];
-  logic [10:0] secondary_com_y [3:0];
+  logic [9:0] secondary_com_y [3:0];
 `ifdef SECONDARY
   genvar i;
   generate
@@ -602,6 +600,11 @@ module top_level
         uart_rx_y_buf[i][0] = uart_rx_y_buf[i][1];
       end
     end
+
+    logic [3:0] uart_rx_x_trigger;
+    logic [3:0] uart_rx_y_trigger;
+    logic [10:0] temp_secondary_com_x [3:0];
+    logic [10:0] temp_secondary_com_y [3:0];
     genvar i;
     generate
       for (i = 0; i < 4; i++) begin
@@ -610,17 +613,29 @@ module top_level
           .rst_in(sys_rst_pixel),
           .rx_wire_in(uart_rx_x_buf[i][0]),
           .new_data_out(uart_rx_x_trigger[i]),
-          .data_byte_out(secondary_com_x[i])
+          .data_byte_out(temp_secondary_com_x[i])
         );
         uart_receive #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_rx_y (
           .clk_in(clk_pixel),
           .rst_in(sys_rst_pixel),
           .rx_wire_in(uart_rx_y_buf[i][0]),
           .new_data_out(uart_rx_y_trigger[i]),
-          .data_byte_out(secondary_com_y[i])
+          .data_byte_out(temp_secondary_com_y[i])
         );
       end
     endgenerate
+
+    // Store COM on recieve
+    always_ff @(posedge clk_pixel) begin
+      for (int i = 0; i < 4; i++) begin
+        if (uart_rx_x_trigger[i]) begin
+          secondary_com_x[i] <= temp_secondary_com_x[i];
+        end
+        if (uart_rx_y_trigger[i]) begin
+          secondary_com_y[i] <= temp_secondary_com_y[i][9:0];
+        end
+      end
+    end
 `endif
 
   //TODO: connect using parallax
@@ -775,8 +790,14 @@ module top_level
     .com_sprite_pixel_in({img_red, img_green, img_blue}), 
     .pixel_out({graphics_red, graphics_green, graphics_blue}) //output to tmds
   );
+  // Pipeline pixel to avoid long combination path
+  logic [7:0] piped_graphics_red, piped_graphics_green, piped_graphics_blue;
+  always @(posedge clk_pixel) begin
+    piped_graphics_red <= graphics_red;
+    piped_graphics_green <= graphics_green;
+    piped_graphics_blue <= graphics_blue;
+  end
 
-`ifdef MAIN
   // Graphics Controller
   graphics_controller #(
     .ACTIVE_H_PIXELS(1280), .ACTIVE_LINES(720),
@@ -793,11 +814,10 @@ module top_level
     .player_depth(player_depth),
     .is_wall(disable_wall ? 1'b0 : pixel_is_wall),
     .is_collision(disable_player_tracking ? 1'b0 : pixel_is_collision),
-    .pixel_in({graphics_red, graphics_green, graphics_blue}),
+    .pixel_in({piped_graphics_red, piped_graphics_green, piped_graphics_blue}),
     .game_state_in(is_game_enabled ? 1'b1 : game_state),
     .pixel_out({red, green, blue})
   );
-`endif
 
   // HDMI Output: just like before!
   logic [9:0] tmds_10b [0:2]; //output of each TMDS encoder!
