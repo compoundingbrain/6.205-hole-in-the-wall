@@ -18,7 +18,7 @@ module top_level
   input wire [2:0]    rgb0,
   input wire [2:0]    rgb1,
   input wire [3:0]    btn,
-  input wire [1:0]    pmodb,
+  input wire [7:0]    pmodb,
   // seven segment
   output logic [3:0]  ss0_an,//anode control for upper four digits of seven-seg display
   output logic [3:0]  ss1_an,//anode control for lower four digits of seven-seg display
@@ -563,52 +563,66 @@ module top_level
   // Transmit/Recieve COM via UART
   localparam UART_BAUD_RATE = 115200;
 `ifdef SECONDARY
-    uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_tx_x_module (
-      .clk_in(clk_pixel),
-      .rst_in(sys_rst_pixel),
-      .data_byte_in(last_valid_x_com_out[0]),
-      .trigger_in(com_valid_out),
-      .busy_out(),
-      .tx_wire_out(pmodb[0])
-    );
-    uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(10)) uart_tx_y_module (
-      .clk_in(clk_pixel),
-      .rst_in(sys_rst_pixel),
-      .data_byte_in(last_valid_y_com_out[0]),
-      .trigger_in(com_valid_out),
-      .busy_out(),
-      .tx_wire_out(pmodb[1])
-    );
-`elsif MAIN 
 
-    // Buffer input wires to avoid metastability
-    logic uart_rx_x_buf [1:0];
-    logic uart_rx_y_buf [1:0];
+  genvar i;
+  generate
+    for (i = 0; i < 4; i++) begin
+      // Send x and y COMs along 8 wires. For simplicity pad y com to 11 bits 
+      // and then only take bottom 10 bits after rx.
+      uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_tx_x (
+        .clk_in(clk_pixel),
+        .rst_in(sys_rst_pixel),
+        .data_byte_in(last_valid_x_com_out[i]),
+        .trigger_in(com_valid_out),
+        .busy_out(),
+        .tx_wire_out(pmodb[i])
+      );
+      uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_tx_y (
+        .clk_in(clk_pixel),
+        .rst_in(sys_rst_pixel),
+        .data_byte_in({1'b0, last_valid_y_com_out[i]}),
+        .trigger_in(com_valid_out),
+        .busy_out(),
+        .tx_wire_out(pmodb[i+4])
+      );
+    end
+  endgenerate
+`elsif MAIN 
+    // Buffer input wires to avoid metastability, note iVerilog warnings here are OK
+    logic [1:0] uart_rx_x_buf [3:0];
+    logic [1:0] uart_rx_y_buf [3:0];
     always_comb begin
-      uart_rx_x_buf[1] = pmodb[0];
-      uart_rx_x_buf[0] = uart_rx_x_buf[1];
-      uart_rx_y_buf[1] = pmodb[1];
-      uart_rx_y_buf[0] = uart_rx_y_buf[1];
+      for (int i = 0; i < 4; i++) begin
+        uart_rx_x_buf[i][1] = pmodb[i];
+        uart_rx_x_buf[i][0] = uart_rx_x_buf[i][1];
+        uart_rx_y_buf[i][1] = pmodb[i+4];
+        uart_rx_y_buf[i][0] = uart_rx_y_buf[i][1];
+      end
     end
 
-    logic uart_rx_x_trigger;
-    logic uart_rx_y_trigger;
-    logic [10:0] secondary_com_x;
-    logic [9:0] secondary_com_y;
-    uart_receive #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_rx_x_module (
-      .clk_in(clk_pixel),
-      .rst_in(sys_rst_pixel),
-      .rx_wire_in(uart_rx_x_buf[0]),
-      .new_data_out(uart_rx_x_trigger),
-      .data_byte_out(secondary_com_x)
-    );
-    uart_receive #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(10)) uart_rx_y_module (
-      .clk_in(clk_pixel),
-      .rst_in(sys_rst_pixel),
-      .rx_wire_in(uart_rx_y_buf[0]),
-      .new_data_out(uart_rx_y_trigger),
-      .data_byte_out(secondary_com_y)
-    );
+    logic [3:0] uart_rx_x_trigger;
+    logic [3:0] uart_rx_y_trigger;
+    logic [10:0] secondary_com_x [3:0];
+    logic [10:0] secondary_com_y [3:0];
+    genvar i;
+    generate
+      for (i = 0; i < 4; i++) begin
+        uart_receive #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_rx_x (
+          .clk_in(clk_pixel),
+          .rst_in(sys_rst_pixel),
+          .rx_wire_in(uart_rx_x_buf[i][0]),
+          .new_data_out(uart_rx_x_trigger[i]),
+          .data_byte_out(secondary_com_x[i])
+        );
+        uart_receive #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_rx_y (
+          .clk_in(clk_pixel),
+          .rst_in(sys_rst_pixel),
+          .rx_wire_in(uart_rx_y_buf[i][0]),
+          .new_data_out(uart_rx_y_trigger[i]),
+          .data_byte_out(secondary_com_y[i])
+        );
+      end
+    endgenerate
 `endif
 
   //TODO: connect using parallax
@@ -644,7 +658,7 @@ module top_level
     .sw(sw),
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
-    .data_valid_in(1'b1),//!hsync_hdmi && !vsync_hdmi),
+    .data_valid_in(active_draw_hdmi),
     .is_person_in(pixel_is_player),
     .player_depth_in(player_depth),
     .hcount_out(),
