@@ -61,12 +61,17 @@ module top_level
   assign disable_wall = sw[15]; // 1 for disable, 0 for enable
   logic is_game_enabled; // 0 for enabled, 1 for disabled
   assign is_game_enabled = sw[13];
-  logic [3:0] red_lower;
-  assign red_lower = {2'b00, sw[5:4]};
-  logic [3:0] blue_lower;
-  assign blue_lower = {2'b00, sw[7:6]};
-  logic [3:0] green_upper;
-  assign green_upper = sw[11:8];
+  logic [3:0] red_upper;
+  assign red_upper = 0;
+  logic [3:0] blue_upper;
+  assign blue_upper = 0;
+  // logic [1:0] shift_for_red_and_blue = sw[5:4];
+  logic [3:0] green_lower;
+  assign green_lower = 0;
+  logic [3:0] cr_upper;
+  assign cr_upper = sw[7:4];
+  logic [3:0] cb_upper;
+  assign cb_upper = sw[11:8];
 
   // Clock and Reset Signals: updated for a couple new clocks!
   logic          sys_rst_camera;
@@ -420,7 +425,7 @@ module top_level
 
   //channel select module (select which of six color channels to mask):
   logic [2:0] channel_sel;
-  logic [7:0] selected_channel; //selected channels
+  // logic [7:0] selected_channel; //selected channels
   //selected_channel could contain any of the six color channels depend on selection
 
   //threshold module (apply masking threshold):
@@ -430,11 +435,20 @@ module top_level
   logic [7:0] upper_red_threshold;
   logic [7:0] lower_blue_threshold;
   logic [7:0] upper_blue_threshold;
-  logic       not_green_mask; //Whether or not thresholded pixel is 1 or 0
+  logic [7:0] lower_cr_threshold;
+  logic [7:0] upper_cr_threshold;
+  logic [7:0] lower_cb_threshold;
+  logic [7:0] upper_cb_threshold;
+  logic       green_mask; //Whether or not thresholded pixel is 1 or 0
   logic       red_mask;
   logic       blue_mask;
-  logic       pixel_is_player;
-  assign pixel_is_player = not_green_mask & red_mask & blue_mask;
+  logic       is_green_screen;
+  logic       is_player;
+  logic       cr_mask;
+  logic       cb_mask;
+  // assign is_green_screen = (green_mask) & (fb_green > (fb_red >> shift_for_red_and_blue)) & (fb_green > (fb_blue >> shift_for_red_and_blue));
+  assign is_green_screen = cr_mask & cb_mask;
+  assign is_player = ~is_green_screen;
 
   //take lower 8 of full outputs.
   // treat cr and cb as signed numbers, invert the MSB to get an unsigned equivalent ( [-128,128) maps to [0,256) )
@@ -452,56 +466,78 @@ module top_level
   // * 3'b111: not valid
   //Channel Select: Takes in the full RGB and YCrCb information and
   // chooses one of them to output as an 8 bit value
-  channel_select mcs(
-    .sel_in(3'b000), // for green screen
-    .r_in(fb_red),    
-    .g_in(fb_green),  
-    .b_in(fb_blue),   
-    .y_in(y),
-    .cr_in(cr),
-    .cb_in(cb),
-    .channel_out(selected_channel)
-  );
+  // channel_select green_mcs(
+  //   .sel_in(3'b000), // for green screen
+  //   .r_in(fb_red),    
+  //   .g_in(fb_green),  
+  //   .b_in(fb_blue),   
+  //   .y_in(y),
+  //   .cr_in(cr),
+  //   .cb_in(cb),
+  //   .channel_out(selected_channel)
+  // );
 
   // Threshold: Looking for not green screen, so low green, higher red and blues
 
   //threshold values used to determine what value  passes:
-  assign lower_green_threshold = {4'b0000,4'b0};
-  assign upper_green_threshold = {green_upper,4'b0};
-  assign lower_red_threshold = {red_lower,4'b0};
-  assign upper_red_threshold = {4'b1111,4'b0};
-  assign lower_blue_threshold = {blue_lower,4'b0};
-  assign upper_blue_threshold = {4'b1111,4'b0};
+  assign lower_green_threshold = {green_lower,4'b0};
+  assign upper_green_threshold = {4'b1111,4'b0};
+  assign lower_red_threshold = {4'b0000,4'b0};
+  assign upper_red_threshold = {red_upper,4'b0};
+  assign lower_blue_threshold = {4'b0000,4'b0};
+  assign upper_blue_threshold = {blue_upper,4'b0};
+  assign lower_cr_threshold = {4'b0000,4'b0};
+  assign upper_cr_threshold = {4'b1001,4'b0};
+  assign lower_cb_threshold = {4'b0000,4'b0};
+  assign upper_cb_threshold = {4'b1001,4'b0};
 
   //Thresholder: Takes in the full selected channedl and
   //based on upper and lower bounds provides a binary mask bit
   // * 1 if selected channel is within the bounds (inclusive)
   // * 0 if selected channel is not within the bounds
-  threshold green_mt(
+  // threshold green_mt(
+  //   .clk_in(clk_pixel),
+  //   .rst_in(sys_rst_pixel),
+  //   .pixel_in(fb_green),
+  //   .lower_bound_in(lower_green_threshold),
+  //   .upper_bound_in(upper_green_threshold),
+  //   .mask_out(green_mask) //single bit if pixel within mask.
+  // );
+
+  // threshold red_mt(
+  //   .clk_in(clk_pixel),
+  //   .rst_in(sys_rst_pixel),
+  //   .pixel_in(fb_red),
+  //   .lower_bound_in(lower_red_threshold),
+  //   .upper_bound_in(upper_red_threshold),
+  //   .mask_out(red_mask) //single bit if pixel within mask.
+  // );
+
+  // threshold blue_mt(
+  //   .clk_in(clk_pixel),
+  //   .rst_in(sys_rst_pixel),
+  //   .pixel_in(fb_blue),
+  //   .lower_bound_in(lower_blue_threshold),
+  //   .upper_bound_in(upper_blue_threshold),
+  //   .mask_out(blue_mask) //single bit if pixel within mask.
+  // );
+
+  threshold cr_mt(
     .clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
-    .pixel_in(selected_channel),
-    .lower_bound_in(lower_green_threshold),
-    .upper_bound_in(upper_green_threshold),
-    .mask_out(not_green_mask) //single bit if pixel within mask.
+    .pixel_in(cr),
+    .lower_bound_in(lower_cr_threshold),
+    .upper_bound_in(upper_cr_threshold),
+    .mask_out(cr_mask) //single bit if pixel within mask.
   );
 
-  threshold red_mt(
+  threshold cb_mt(
     .clk_in(clk_pixel),
     .rst_in(sys_rst_pixel),
-    .pixel_in(selected_channel),
-    .lower_bound_in(lower_red_threshold),
-    .upper_bound_in(upper_red_threshold),
-    .mask_out(red_mask) //single bit if pixel within mask.
-  );
-
-  threshold blue_mt(
-    .clk_in(clk_pixel),
-    .rst_in(sys_rst_pixel),
-    .pixel_in(selected_channel),
-    .lower_bound_in(lower_blue_threshold),
-    .upper_bound_in(upper_blue_threshold),
-    .mask_out(blue_mask) //single bit if pixel within mask.
+    .pixel_in(cb),
+    .lower_bound_in(lower_cb_threshold),
+    .upper_bound_in(upper_cb_threshold),
+    .mask_out(cb_mask) //single bit if pixel within mask.
   );
 
 
@@ -537,7 +573,7 @@ module top_level
     .rst_in(sys_rst_pixel),
     .x_in(hcount_hdmi),
     .y_in(vcount_hdmi),
-    .valid_in(disable_player_tracking ? 1'b0 : pixel_is_player & active_draw_hdmi), // is player in mask
+    .valid_in(is_player & active_draw_hdmi), // is player in mask
     .tabulate_in(nf_hdmi),
     .num_players(num_players),
     .x_out(x_com_out),
@@ -645,7 +681,7 @@ module top_level
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
     .data_valid_in(1'b1),//!hsync_hdmi && !vsync_hdmi),
-    .is_person_in(pixel_is_player),
+    .is_person_in(is_player),
     .player_depth_in(player_depth),
     .hcount_out(),
     .vcount_out(),
@@ -748,8 +784,8 @@ module top_level
     .target_in(target_choice), //choose target
     .camera_pixel_in({fb_red, fb_green, fb_blue}), 
     .camera_y_in(y), //luminance 
-    .channel_in(selected_channel), //current channel being drawn 
-    .thresholded_pixel_in(pixel_is_player), //one bit mask signal
+    .channel_in(8'h00), // selected_channel), //current channel being drawn 
+    .thresholded_pixel_in(is_green_screen), //one bit mask signal
     .crosshair_in(crosshair_valid), 
     .crosshair_color_in({ch_red, ch_green, ch_blue}),
     .com_sprite_pixel_in({img_red, img_green, img_blue}), 
