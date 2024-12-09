@@ -1,4 +1,4 @@
-`define MAIN
+`define SECONDARY
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -629,15 +629,6 @@ module top_level
     end
   endgenerate
 `elsif MAIN 
-    // logic line;
-    // uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_tx_y (
-    //     .clk_in(clk_pixel),
-    //     .rst_in(sys_rst_pixel),
-    //     .data_byte_in(11'b000_1000_0000),
-    //     .trigger_in(nf_hdmi),
-    //     .busy_out(),
-    //     .tx_wire_out(line)
-    // );
 
     // Buffer input wires to avoid metastability, note iVerilog warnings here are OK
     logic [1:0] uart_rx_x_buf [3:0];
@@ -812,6 +803,33 @@ module top_level
         (hcount_hdmi == secondary_com_x[0])) begin
       ch_red   = 8'hFF;
       ch_green = 8'hFF;
+      crosshair_valid = 1'b1;
+    end
+
+    // Crosshair for secondary centroid 2 - Purple
+    if ((vcount_hdmi == secondary_com_y[1]) ||
+        (hcount_hdmi == secondary_com_x[1])) begin
+      ch_red   = 8'hFF;
+      ch_green = 8'h00;
+      ch_blue  = 8'hFF;
+      crosshair_valid = 1'b1;
+    end
+
+    // Crosshair for secondary centroid 3 - Orange
+    if ((vcount_hdmi == secondary_com_y[2]) ||
+        (hcount_hdmi == secondary_com_x[2])) begin
+      ch_red   = 8'hFF;
+      ch_green = 8'h80;
+      ch_blue  = 8'h00;
+      crosshair_valid = 1'b1;
+    end
+
+    // Crosshair for secondary centroid 4 - Black
+    if ((vcount_hdmi == secondary_com_y[3]) ||
+        (hcount_hdmi == secondary_com_x[3])) begin
+      ch_red   = 8'h00;
+      ch_green = 8'h00;
+      ch_blue  = 8'h00;
       crosshair_valid = 1'b1;
     end
   end
