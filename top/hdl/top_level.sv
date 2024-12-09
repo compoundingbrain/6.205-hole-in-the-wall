@@ -1,4 +1,4 @@
-`define SECONDARY
+`define MAIN
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -605,26 +605,26 @@ module top_level
   logic [10:0] secondary_com_x [3:0];
   logic [9:0] secondary_com_y [3:0];
 `ifdef SECONDARY
-  genvar i;
+  genvar tx_i;
   generate
-    for (i = 0; i < 4; i++) begin
+    for (tx_i = 0; tx_i < 4; tx_i++) begin
       // Send x and y COMs along 8 wires. For simplicity pad y com to 11 bits 
       // and then only take bottom 10 bits after rx.
       uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_tx_x (
         .clk_in(clk_pixel),
         .rst_in(sys_rst_pixel),
-        .data_byte_in(last_valid_x_com_out[i]),
+        .data_byte_in(last_valid_x_com_out[tx_i]),
         .trigger_in(com_valid_out),
         .busy_out(),
-        .tx_wire_out(pmodb[i])
+        .tx_wire_out(pmodb[tx_i])
       );
       uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_tx_y (
         .clk_in(clk_pixel),
         .rst_in(sys_rst_pixel),
-        .data_byte_in({1'b0, last_valid_y_com_out[i]}),
+        .data_byte_in({1'b0, last_valid_y_com_out[tx_i]}),
         .trigger_in(com_valid_out),
         .busy_out(),
-        .tx_wire_out(pmodb[i+4])
+        .tx_wire_out(pmodb[tx_i+4])
       );
     end
   endgenerate
@@ -646,22 +646,22 @@ module top_level
     logic [3:0] uart_rx_y_trigger;
     logic [10:0] temp_secondary_com_x [3:0];
     logic [10:0] temp_secondary_com_y [3:0];
-    genvar i;
+    genvar rx_i;
     generate
-      for (i = 0; i < 4; i++) begin
+      for (rx_i = 0; rx_i < 4; rx_i++) begin
         uart_receive #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_rx_x (
           .clk_in(clk_pixel),
           .rst_in(sys_rst_pixel),
-          .rx_wire_in(uart_rx_x_buf[i][0]),
-          .new_data_out(uart_rx_x_trigger[i]),
-          .data_byte_out(temp_secondary_com_x[i])
+          .rx_wire_in(uart_rx_x_buf[rx_i][0]),
+          .new_data_out(uart_rx_x_trigger[rx_i]),
+          .data_byte_out(temp_secondary_com_x[rx_i])
         );
         uart_receive #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_rx_y (
           .clk_in(clk_pixel),
           .rst_in(sys_rst_pixel),
-          .rx_wire_in(uart_rx_y_buf[i][0]),
-          .new_data_out(uart_rx_y_trigger[i]),
-          .data_byte_out(temp_secondary_com_y[i])
+          .rx_wire_in(uart_rx_y_buf[rx_i][0]),
+          .new_data_out(uart_rx_y_trigger[rx_i]),
+          .data_byte_out(temp_secondary_com_y[rx_i])
         );
       end
     endgenerate
@@ -679,9 +679,30 @@ module top_level
     end
 `endif
 
-  //TODO: connect using parallax
-  logic [7:0] player_depth;
-  assign player_depth = 8'd60;
+  // Calculate player depths via parallax
+  logic [7:0] player_depths [3:0];
+  localparam SENSOR_WIDTH = 0.334646;
+  localparam FOCAL_LENGTH = 0.1295276;
+  localparam BASELINE_DISTANCE = 6;
+`ifdef MAIN
+  genvar depth_i;
+  generate
+    for (depth_i = 0; depth_i < 4; depth_i++) begin
+      parallax #(
+        .RESOLUTION_WIDTH(SCREEN_WIDTH),
+        .SENSOR_WIDTH(SENSOR_WIDTH),
+        .FOCAL_LENGTH(FOCAL_LENGTH),
+        .BASELINE_DISTANCE(BASELINE_DISTANCE)
+      ) plax (
+        .clk_in(clk_pixel),
+        .rst_in(sys_rst_pixel),
+        .x_1_in(last_valid_x_com_out[depth_i]),
+        .x_2_in(secondary_com_x[depth_i]),
+        .depth_out(player_depths[depth_i])
+      );
+    end
+  endgenerate
+`endif
 
   //============================================================================
   // Game Logic Pipeline
@@ -714,7 +735,7 @@ module top_level
     .vcount_in(vcount_hdmi),
     .data_valid_in(active_draw_hdmi),
     .is_person_in(is_player),
-    .player_depth_in(player_depth),
+    .player_depth_in(player_depths[0]), // TODO: handle multiple player depths
     .hcount_out(),
     .vcount_out(),
     .data_valid_out(),
@@ -879,7 +900,7 @@ module top_level
     .vcount_in(vcount_hdmi),
     .pixel_player_num(pixel_player_num),
     .wall_depth(wall_depth),
-    .player_depth(player_depth),
+    .player_depth(player_depths[0]), // TODO: display multiple player depths
     .is_wall(disable_wall ? 1'b0 : pixel_is_wall),
     .is_collision(disable_player_tracking ? 1'b0 : pixel_is_collision),
     .pixel_in({piped_graphics_red, piped_graphics_green, piped_graphics_blue}),
