@@ -632,12 +632,12 @@ module top_level
     // Buffer input wires to avoid metastability, note iVerilog warnings here are OK
     logic [1:0] uart_rx_x_buf [3:0];
     logic [1:0] uart_rx_y_buf [3:0];
-    always_comb begin
+    always_ff @(posedge clk_pixel) begin
       for (int i = 0; i < 4; i++) begin
-        uart_rx_x_buf[i][1] = pmodb[i];
-        uart_rx_x_buf[i][0] = uart_rx_x_buf[i][1];
-        uart_rx_y_buf[i][1] = pmodb[i+4];
-        uart_rx_y_buf[i][0] = uart_rx_y_buf[i][1];
+        uart_rx_x_buf[i][1] <= pmodb[i];
+        uart_rx_x_buf[i][0] <= uart_rx_x_buf[i][1];
+        uart_rx_y_buf[i][1] <= pmodb[i+4];
+        uart_rx_y_buf[i][0] <= uart_rx_y_buf[i][1];
       end
     end
 
@@ -1011,7 +1011,8 @@ module top_level
   assign led[0] = 0;
   assign led[1] = cr_init_valid;
   assign led[2] = cr_init_ready;
-  assign led[15:3] = 0;
+  assign led[4:3] = 0;
+  assign led[15:5] = secondary_com_x[0];
 
 endmodule // top_level
 
