@@ -18,7 +18,11 @@ module top_level
   input wire [2:0]    rgb0,
   input wire [2:0]    rgb1,
   input wire [3:0]    btn,
+`ifdef MAIN
   input wire [7:0]    pmodb,
+`elsif SECONDARY
+  output wire [7:0] pmodb,
+`endif
   // seven segment
   output logic [3:0]  ss0_an,//anode control for upper four digits of seven-seg display
   output logic [3:0]  ss1_an,//anode control for lower four digits of seven-seg display
