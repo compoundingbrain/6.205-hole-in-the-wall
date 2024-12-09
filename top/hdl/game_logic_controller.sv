@@ -114,7 +114,7 @@ module game_logic_controller #(
 
         if (rst_in) begin
             curr_round <= 0;
-            curr_wall_idx <= 1;
+            curr_wall_idx <= 0;
             wall_tick_frequency <= MAX_FRAMES_PER_WALL_TICK;
             wall_depth_rst <= 0;
             new_round_pulse <= 0;
