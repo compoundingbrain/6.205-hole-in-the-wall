@@ -14,7 +14,7 @@ module moving_frame_k_means (
   output logic [10:0] x_out [3:0], // make this 4 wide for 4 players
   output logic [9:0] y_out [3:0], // make this 4 wide for 4 players
   output logic valid_out, // make this 4 wide for 4 players
-  output logic [1:0] player_out
+  output logic [1:0] player_out // TODO: With pipelining this is wrong!!!!!
 );
 
   localparam ONE_PLAYER = 2'b00;
