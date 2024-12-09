@@ -1,4 +1,4 @@
-`define SECONDARY
+`define MAIN
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -21,7 +21,7 @@ module top_level
 `ifdef MAIN
   input wire [7:0]    pmodb,
 `elsif SECONDARY
-  output wire [7:0] pmodb,
+  output logic [7:0] pmodb,
 `endif
   // seven segment
   output logic [3:0]  ss0_an,//anode control for upper four digits of seven-seg display
@@ -629,6 +629,16 @@ module top_level
     end
   endgenerate
 `elsif MAIN 
+    // logic line;
+    // uart_transmit #(.BAUD_RATE(UART_BAUD_RATE), .DATA_WIDTH(11)) uart_tx_y (
+    //     .clk_in(clk_pixel),
+    //     .rst_in(sys_rst_pixel),
+    //     .data_byte_in(11'b000_1000_0000),
+    //     .trigger_in(nf_hdmi),
+    //     .busy_out(),
+    //     .tx_wire_out(line)
+    // );
+
     // Buffer input wires to avoid metastability, note iVerilog warnings here are OK
     logic [1:0] uart_rx_x_buf [3:0];
     logic [1:0] uart_rx_y_buf [3:0];
@@ -1011,8 +1021,8 @@ module top_level
   assign led[0] = 0;
   assign led[1] = cr_init_valid;
   assign led[2] = cr_init_ready;
-  assign led[4:3] = 0;
-  assign led[15:5] = secondary_com_x[0];
+  assign led[14:3] = 0;
+  assign led[15] = pmodb[0];
 
 endmodule // top_level
 
