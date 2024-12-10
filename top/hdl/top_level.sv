@@ -681,13 +681,14 @@ module top_level
 
   // Calculate player depths via parallax
   logic [7:0] player_depths [3:0];
-  localparam SENSOR_WIDTH = 0.334646;
-  localparam FOCAL_LENGTH = 0.1295276;
-  localparam BASELINE_DISTANCE = 6;
+  localparam SENSOR_WIDTH = 1;
+  localparam FOCAL_LENGTH = 1;
+  localparam BASELINE_DISTANCE = 1;
 `ifdef MAIN
   genvar depth_i;
   generate
     for (depth_i = 0; depth_i < 4; depth_i++) begin
+      // TODO: pass in closest COM and tune parameters
       parallax #(
         .RESOLUTION_WIDTH(SCREEN_WIDTH),
         .SENSOR_WIDTH(SENSOR_WIDTH),
@@ -696,8 +697,11 @@ module top_level
       ) plax (
         .clk_in(clk_pixel),
         .rst_in(sys_rst_pixel),
+        .data_valid_in(uart_rx_x_trigger[depth_i]),
         .x_1_in(last_valid_x_com_out[depth_i]),
-        .x_2_in(secondary_com_x[depth_i]),
+        // User temp com value here since it's synced with uart trigger but in general want 
+        // to use secondary_com_x not temp_secondary_com_x
+        .x_2_in(temp_secondary_com_x[depth_i]),
         .depth_out(player_depths[depth_i])
       );
     end
