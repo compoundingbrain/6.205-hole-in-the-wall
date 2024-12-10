@@ -1,4 +1,4 @@
-`define SECONDARY
+`define MAIN
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -82,6 +82,8 @@ module top_level
   logic          sys_rst_pixel;
   logic          sys_rst_game_logic;
 
+  logic          btn_start_game;
+
   logic          clk_camera;
   logic          clk_pixel;
   logic          clk_5x;
@@ -117,10 +119,12 @@ module top_level
   // this port also is specifically set to high drive by the XDC file.
   assign cam_xclk = clk_xc;
 
+  // Buttons + Resets 
   assign sys_rst_camera = btn[0]; //use for resetting camera side of logic
   assign sys_rst_game_logic = btn[0]; //use for resetting game logic pipeline
   assign sys_rst_pixel = btn[0]; //use for resetting hdmi/draw side of logic
   assign sys_rst_migref = btn[0];
+  assign btn_start_game = btn[1];
 
 
   // video signal generator signals
@@ -709,7 +713,7 @@ module top_level
   ) game_controller (
     .clk_in(clk_pixel),
     .rst_in(sys_rst_game_logic),
-    .sw(sw),
+    .start_game_in(btn_start_game),
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
     .data_valid_in(active_draw_hdmi),

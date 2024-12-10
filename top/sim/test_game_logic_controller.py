@@ -33,6 +33,7 @@ async def do_setup(dut):
     dut.data_valid_in.value = 0
     dut.is_person_in.value = 0
     dut.player_depth_in.value = 0
+    dut.start_game_in.value = 0
     
     await ClockCycles(dut.clk_in, 3) #wait three clock cycles
     await  FallingEdge(dut.clk_in)
@@ -54,6 +55,10 @@ await ClockCycles(dut.clk_in, 1000) #wait a few clock cycles
 async def test_a(dut):
     await do_setup(dut)
 
+    await ClockCycles(dut.clk_in, 3)
+    await FallingEdge(dut.clk_in)
+    dut.start_game_in.value = 1
+
     for round in range(1):
         for frame in range(100):
             for y in range(SCREEN_HEIGHT):
@@ -61,7 +66,7 @@ async def test_a(dut):
                     dut.hcount_in.value = x
                     dut.vcount_in.value = y
                     dut.data_valid_in.value = 1
-                    dut.is_person_in.value = 1
+                    dut.is_person_in.value = 0
                     dut.player_depth_in.value = 0
                     await FallingEdge(dut.clk_in)  
                 
