@@ -451,12 +451,14 @@ module top_level
   logic       red_mask;
   logic       blue_mask;
   logic       is_green_screen;
+  logic       is_in_game_window; // define a window inside the screen that will not be considered a player
   logic       is_player;
   logic       cr_mask;
   logic       cb_mask;
   // assign is_green_screen = (green_mask) & (fb_green > (fb_red >> shift_for_red_and_blue)) & (fb_green > (fb_blue >> shift_for_red_and_blue));
   assign is_green_screen = cr_mask & cb_mask;
-  assign is_player = ~is_green_screen;
+  assign is_in_game_window = (hcount_hdmi >= 120) & (hcount_hdmi <= 1279-120) & (vcount_hdmi >= 72) & (vcount_hdmi <= 719-72);
+  assign is_player = ~is_green_screen & is_in_game_window;
 
   //take lower 8 of full outputs.
   // treat cr and cb as signed numbers, invert the MSB to get an unsigned equivalent ( [-128,128) maps to [0,256) )
@@ -856,7 +858,7 @@ module top_level
     .camera_pixel_in({fb_red, fb_green, fb_blue}), 
     .camera_y_in(y), //luminance 
     .channel_in(8'h00), // selected_channel), //current channel being drawn 
-    .thresholded_pixel_in(is_green_screen), //one bit mask signal
+    .thresholded_pixel_in(is_player), //one bit mask signal
     .crosshair_in(crosshair_valid), 
     .crosshair_color_in({ch_red, ch_green, ch_blue}),
     .com_sprite_pixel_in({img_red, img_green, img_blue}), 
