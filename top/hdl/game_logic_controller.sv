@@ -9,7 +9,8 @@ module game_logic_controller #(
     parameter MAX_WALL_DEPTH = GOAL_DEPTH + GOAL_DEPTH_DELTA + 5,
     parameter MAX_FRAMES_PER_WALL_TICK = 15, // slowest speed of wall movement
     parameter BIT_MASK_DOWN_SAMPLE_FACTOR = 16,
-    parameter MAX_ROUNDS = 5
+    parameter MAX_ROUNDS = 5,
+    parameter COLLISION_THRESHOLD = 65536
 )
 (
     input  wire                clk_in,
@@ -48,6 +49,7 @@ module game_logic_controller #(
     logic [$clog2(BIT_MASK_HEIGHT)*2:0] bitmask_y;
     logic is_wall;
     logic is_collision;
+    logic [$clog2(SCREEN_HEIGHT * SCREEN_WIDTH):0] num_collisions; // worst case all pixels are collisions
     // TODO: Bit masks get pulled from BRAM in reverse so we need to flip the indices but
     //       it would be more efficient to just have the python script store them in reverse
     assign is_wall = bit_mask_wall[bitmask_x + bitmask_y] && data_valid_in;
@@ -114,6 +116,7 @@ module game_logic_controller #(
             new_round_pulse <= 0;
             wall_tick_pulse <= 0;
             game_state <= 1;
+            num_collisions <= 0;
             
         end else if (~game_started && start_game_in) begin
             // Start game
@@ -125,6 +128,7 @@ module game_logic_controller #(
             new_round_pulse <= 0;
             wall_tick_pulse <= 0;
             game_state <= 1;
+            num_collisions <= 0;
 
         end else if (~game_started) begin
             // Game not started
@@ -134,6 +138,7 @@ module game_logic_controller #(
         end else if (game_started) begin
             // Game in progress
 
+            // Control sending wall movement signal at correct frequency
             if (wall_tick_pulse) begin
                 wall_tick_pulse <= 0;
             end
@@ -149,6 +154,7 @@ module game_logic_controller #(
                 curr_wall_idx <= (curr_wall_idx == 9) ? 0 : curr_wall_idx + 1;
             end
             else if(wall_tick_pulse && wall_depth == MAX_WALL_DEPTH - 1) begin
+                // Wall reached end of depth
                 new_round_pulse <= 1;
                 wall_depth_rst <= 1;
             end
@@ -159,10 +165,15 @@ module game_logic_controller #(
                 game_started <= 0;
             end
 
+            if (new_frame) 
+                num_collisions <= 0;
+            else if(is_collision)
+                num_collisions <= num_collisions + 1;
+
             if (data_valid_in &&
                 (wall_depth >= (GOAL_DEPTH - GOAL_DEPTH_DELTA)) &&
                 (wall_depth <= (GOAL_DEPTH + GOAL_DEPTH_DELTA)) && 
-                is_collision) begin
+                num_collisions >= COLLISION_THRESHOLD) begin
                 // Pixel collision
                 game_state <= 0;
                 game_started <= 0;

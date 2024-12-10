@@ -712,7 +712,8 @@ module top_level
     .MAX_WALL_DEPTH(MAX_WALL_DEPTH),
     .MAX_FRAMES_PER_WALL_TICK(15), // slowest speed of wall movement
     .BIT_MASK_DOWN_SAMPLE_FACTOR(16),
-    .MAX_ROUNDS(3)
+    .MAX_ROUNDS(3),
+    .COLLISION_THRESHOLD(256)
   ) game_controller (
     .clk_in(clk_pixel),
     .rst_in(sys_rst_game_logic),
