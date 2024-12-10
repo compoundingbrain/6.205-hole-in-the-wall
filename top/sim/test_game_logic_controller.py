@@ -59,7 +59,7 @@ async def test_a(dut):
     await FallingEdge(dut.clk_in)
     dut.start_game_in.value = 1
 
-    for round in range(1):
+    for round in range(4):
         for frame in range(100):
             for y in range(SCREEN_HEIGHT):
                 for x in range(SCREEN_WIDTH):

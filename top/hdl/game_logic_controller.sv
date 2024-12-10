@@ -8,7 +8,8 @@ module game_logic_controller #(
     parameter GOAL_DEPTH_DELTA = 10,
     parameter MAX_WALL_DEPTH = GOAL_DEPTH + GOAL_DEPTH_DELTA + 5,
     parameter MAX_FRAMES_PER_WALL_TICK = 15, // slowest speed of wall movement
-    parameter BIT_MASK_DOWN_SAMPLE_FACTOR = 16
+    parameter BIT_MASK_DOWN_SAMPLE_FACTOR = 16,
+    parameter MAX_ROUNDS = 5
 )
 (
     input  wire                clk_in,
@@ -150,6 +151,12 @@ module game_logic_controller #(
             else if(wall_tick_pulse && wall_depth == MAX_WALL_DEPTH - 1) begin
                 new_round_pulse <= 1;
                 wall_depth_rst <= 1;
+            end
+
+            if (curr_round == MAX_ROUNDS) begin
+                // Won game
+                game_state <= 2;
+                game_started <= 0;
             end
 
             if (data_valid_in &&

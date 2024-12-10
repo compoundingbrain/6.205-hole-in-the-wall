@@ -711,7 +711,8 @@ module top_level
     .GOAL_DEPTH_DELTA(GOAL_DEPTH_DELTA),
     .MAX_WALL_DEPTH(MAX_WALL_DEPTH),
     .MAX_FRAMES_PER_WALL_TICK(15), // slowest speed of wall movement
-    .BIT_MASK_DOWN_SAMPLE_FACTOR(16)
+    .BIT_MASK_DOWN_SAMPLE_FACTOR(16),
+    .MAX_ROUNDS(3)
   ) game_controller (
     .clk_in(clk_pixel),
     .rst_in(sys_rst_game_logic),
@@ -719,7 +720,7 @@ module top_level
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
     .data_valid_in(active_draw_hdmi),
-    .is_person_in(is_player),
+    .is_person_in(disable_player_tracking ? 1'b0 :is_player),
     .player_depth_in(player_depth),
     .hcount_out(),
     .vcount_out(),
