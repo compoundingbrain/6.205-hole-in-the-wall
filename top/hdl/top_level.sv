@@ -1,4 +1,5 @@
 `define MAIN
+`define MAIN
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -72,10 +73,10 @@ module top_level
   // logic [1:0] shift_for_red_and_blue = sw[5:4];
   logic [3:0] green_lower;
   assign green_lower = 0;
-  logic [3:0] cr_upper;
-  assign cr_upper = sw[7:4];
-  logic [3:0] cb_upper;
-  assign cb_upper = sw[11:8];
+  // logic [3:0] cr_upper;
+  // assign cr_upper = sw[7:4];
+  // logic [3:0] cb_upper;
+  // assign cb_upper = sw[11:8];
 
   // Clock and Reset Signals: updated for a couple new clocks!
   logic          sys_rst_camera;
@@ -787,7 +788,7 @@ module top_level
   logic [1:0] target_choice;
   logic [7:0] graphics_red, graphics_green, graphics_blue;
 
-  assign target_choice =  2'b01; // TODO: change from crosshair //sw[3:2];
+  assign target_choice = sw[5:4];
 
   //crosshair output:
   logic [7:0] ch_red, ch_green, ch_blue;
