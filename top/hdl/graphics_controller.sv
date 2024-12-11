@@ -56,11 +56,27 @@ module graphics_controller #(
         .pixel_out(game_over_sprite_pixel)
     );
 
+    logic [23:0] game_win_sprite_pixel;
+    game_win_sprite #(
+        .SCREEN_WIDTH(ACTIVE_H_PIXELS), .SCREEN_HEIGHT(ACTIVE_LINES)
+    ) gws (
+        .clk_in(clk_in),
+        .rst_in(rst_in),
+        .hcount_in(hcount_in),
+        .vcount_in(vcount_in),
+        .pixel_out(game_win_sprite_pixel)
+    );
+
+    localparam GAME_OVER = 0, GAME_IN_PROGRESS = 1, GAME_WIN = 2;
+
     always_comb begin
         if (!rst_in && hcount_in < ACTIVE_H_PIXELS && vcount_in < ACTIVE_LINES) begin  
-            if (game_state_in == 0) begin
+            if (game_state_in == GAME_OVER) begin
                 // Game over screen
                 pixel_out = game_over_sprite_pixel;
+            end else if (game_state_in == GAME_WIN) begin
+                // Game win screen
+                pixel_out = game_win_sprite_pixel;
             end else if (in_wall_depth_sprite) begin
                 // Wall depth sprite
                 pixel_out = wall_depth_sprite_pixel;

@@ -1,9 +1,4 @@
 `define MAIN
-`define MAIN
-`define MAIN
-`define MAIN
-`define MAIN
-`define MAIN
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -87,6 +82,8 @@ module top_level
   logic          sys_rst_pixel;
   logic          sys_rst_game_logic;
 
+  logic          btn_start_game;
+
   logic          clk_camera;
   logic          clk_pixel;
   logic          clk_5x;
@@ -122,10 +119,12 @@ module top_level
   // this port also is specifically set to high drive by the XDC file.
   assign cam_xclk = clk_xc;
 
+  // Buttons + Resets 
   assign sys_rst_camera = btn[0]; //use for resetting camera side of logic
   assign sys_rst_game_logic = btn[0]; //use for resetting game logic pipeline
   assign sys_rst_pixel = btn[0]; //use for resetting hdmi/draw side of logic
   assign sys_rst_migref = btn[0];
+  assign btn_start_game = btn[1];
 
 
   // video signal generator signals
@@ -452,12 +451,14 @@ module top_level
   logic       red_mask;
   logic       blue_mask;
   logic       is_green_screen;
+  logic       is_in_game_window; // define a window inside the screen that will not be considered a player
   logic       is_player;
   logic       cr_mask;
   logic       cb_mask;
   // assign is_green_screen = (green_mask) & (fb_green > (fb_red >> shift_for_red_and_blue)) & (fb_green > (fb_blue >> shift_for_red_and_blue));
   assign is_green_screen = cr_mask & cb_mask;
-  assign is_player = ~is_green_screen;
+  assign is_in_game_window = (hcount_hdmi >= 45) & (hcount_hdmi <= 1279-64) & (vcount_hdmi >= 0) & (vcount_hdmi <= 719-80);
+  assign is_player = ~is_green_screen & is_in_game_window;
 
   //take lower 8 of full outputs.
   // treat cr and cb as signed numbers, invert the MSB to get an unsigned equivalent ( [-128,128) maps to [0,256) )
@@ -734,16 +735,18 @@ module top_level
     .GOAL_DEPTH_DELTA(GOAL_DEPTH_DELTA),
     .MAX_WALL_DEPTH(MAX_WALL_DEPTH),
     .MAX_FRAMES_PER_WALL_TICK(15), // slowest speed of wall movement
-    .BIT_MASK_DOWN_SAMPLE_FACTOR(16)
+    .BIT_MASK_DOWN_SAMPLE_FACTOR(16),
+    .MAX_ROUNDS(3),
+    .COLLISION_THRESHOLD(256)
   ) game_controller (
     .clk_in(clk_pixel),
     .rst_in(sys_rst_game_logic),
-    .sw(sw),
+    .start_game_in(btn_start_game),
     .hcount_in(hcount_hdmi),
     .vcount_in(vcount_hdmi),
     .data_valid_in(active_draw_hdmi),
-    .is_person_in(is_player),
-    .player_depth_in(player_depths[0]), // TODO: handle multiple player depths
+    .is_person_in(disable_player_tracking ? 1'b0 :is_player),
+    .player_depth_in(player_depth),
     .hcount_out(),
     .vcount_out(),
     .data_valid_out(),
@@ -881,7 +884,7 @@ module top_level
     .camera_pixel_in({fb_red, fb_green, fb_blue}), 
     .camera_y_in(y), //luminance 
     .channel_in(8'h00), // selected_channel), //current channel being drawn 
-    .thresholded_pixel_in(is_green_screen), //one bit mask signal
+    .thresholded_pixel_in(is_player), //one bit mask signal
     .crosshair_in(crosshair_valid), 
     .crosshair_color_in({ch_red, ch_green, ch_blue}),
     .com_sprite_pixel_in({img_red, img_green, img_blue}), 

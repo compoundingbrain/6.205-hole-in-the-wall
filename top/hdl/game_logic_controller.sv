@@ -8,12 +8,14 @@ module game_logic_controller #(
     parameter GOAL_DEPTH_DELTA = 10,
     parameter MAX_WALL_DEPTH = GOAL_DEPTH + GOAL_DEPTH_DELTA + 5,
     parameter MAX_FRAMES_PER_WALL_TICK = 15, // slowest speed of wall movement
-    parameter BIT_MASK_DOWN_SAMPLE_FACTOR = 16
+    parameter BIT_MASK_DOWN_SAMPLE_FACTOR = 16,
+    parameter MAX_ROUNDS = 5,
+    parameter COLLISION_THRESHOLD = 65536
 )
 (
     input  wire                clk_in,
     input  wire                rst_in,
-    input  wire [15:0]         sw,
+    input  wire [15:0]         start_game_in,
 
     input  wire [10:0]         hcount_in,
     input  wire [9:0]          vcount_in,
@@ -35,6 +37,7 @@ module game_logic_controller #(
     output logic [2:0]         game_state
 );
     // Round and frame info
+    logic game_started;
     logic [7:0] curr_round;
     logic new_round_pulse;
     logic new_frame;
@@ -46,6 +49,7 @@ module game_logic_controller #(
     logic [$clog2(BIT_MASK_HEIGHT)*2:0] bitmask_y;
     logic is_wall;
     logic is_collision;
+    logic [$clog2(SCREEN_HEIGHT * SCREEN_WIDTH):0] num_collisions; // worst case all pixels are collisions
     // TODO: Bit masks get pulled from BRAM in reverse so we need to flip the indices but
     //       it would be more efficient to just have the python script store them in reverse
     assign is_wall = bit_mask_wall[bitmask_x + bitmask_y] && data_valid_in;
@@ -96,57 +100,88 @@ module game_logic_controller #(
     // TODO: Check player is within bounds
     always_ff @(posedge clk_in) begin
 
-        if (wall_tick_pulse) begin
-            wall_tick_pulse <= 0;
-        end
-        else if(wall_tick_count == wall_tick_frequency) begin
-            wall_tick_pulse <= 1;
-        end 
+        bitmask_x <= BIT_MASK_WIDTH - 1 - hcount_in[10:$clog2(BIT_MASK_DOWN_SAMPLE_FACTOR)];
+        bitmask_y <= (BIT_MASK_HEIGHT - 1 - vcount_in[9:$clog2(BIT_MASK_DOWN_SAMPLE_FACTOR)]) * BIT_MASK_WIDTH;
 
-        if (new_round_pulse) begin
-            new_round_pulse <= 0;
-            wall_depth_rst <= 0;
-        end
-        else if(wall_tick_pulse && wall_depth == MAX_WALL_DEPTH - 1) begin
-            new_round_pulse <= 1;
-            wall_depth_rst <= 1;
-        end
+        is_wall_out <= is_wall;
+        is_person_out <= is_person_in;
+        is_collision_out <= is_collision;
 
         if (rst_in) begin
+            game_started <= 0;
+            wall_depth_rst <= 0;
             curr_round <= 0;
             curr_wall_idx <= 0;
             wall_tick_frequency <= MAX_FRAMES_PER_WALL_TICK;
-            wall_depth_rst <= 0;
             new_round_pulse <= 0;
             wall_tick_pulse <= 0;
-            game_state <= 1;     
-            bitmask_x <= 0;
-            bitmask_y <= 0;
+            game_state <= 1;
+            num_collisions <= 0;
             
-        end else begin
+        end else if (~game_started && start_game_in) begin
+            // Start game
+            game_started <= 1;
+            wall_depth_rst <= 0;
+            curr_round <= 0;
+            curr_wall_idx <= 0;
+            wall_tick_frequency <= MAX_FRAMES_PER_WALL_TICK;
+            new_round_pulse <= 0;
+            wall_tick_pulse <= 0;
+            game_state <= 1;
+            num_collisions <= 0;
+
+        end else if (~game_started) begin
+            // Game not started
+            wall_depth_rst <= 1;
+            wall_depth_out <= 0;
+
+        end else if (game_started) begin
+            // Game in progress
+
+            // Control sending wall movement signal at correct frequency
+            if (wall_tick_pulse) begin
+                wall_tick_pulse <= 0;
+            end
+            else if(wall_tick_count == wall_tick_frequency) begin
+                wall_tick_pulse <= 1;
+            end 
+
             if (new_round_pulse) begin
                 // New round
+                new_round_pulse <= 0;
+                wall_depth_rst <= 0;
                 curr_round <= curr_round + 1;
                 curr_wall_idx <= (curr_wall_idx == 9) ? 0 : curr_wall_idx + 1;
             end
+            else if(wall_tick_pulse && wall_depth == MAX_WALL_DEPTH - 1) begin
+                // Wall reached end of depth
+                new_round_pulse <= 1;
+                wall_depth_rst <= 1;
+            end
+
+            if (curr_round == MAX_ROUNDS) begin
+                // Won game
+                game_state <= 2;
+                game_started <= 0;
+            end
+
+            if (new_frame) 
+                num_collisions <= 0;
+            else if(is_collision)
+                num_collisions <= num_collisions + 1;
 
             if (data_valid_in &&
                 (wall_depth >= (GOAL_DEPTH - GOAL_DEPTH_DELTA)) &&
                 (wall_depth <= (GOAL_DEPTH + GOAL_DEPTH_DELTA)) && 
-                is_collision) begin
+                num_collisions >= COLLISION_THRESHOLD) begin
                 // Pixel collision
                 game_state <= 0;
+                game_started <= 0;
             end
 
-            bitmask_x <= BIT_MASK_WIDTH - 1 - hcount_in[10:$clog2(BIT_MASK_DOWN_SAMPLE_FACTOR)];
-            bitmask_y <= (BIT_MASK_HEIGHT - 1 - vcount_in[9:$clog2(BIT_MASK_DOWN_SAMPLE_FACTOR)]) * BIT_MASK_WIDTH;
-
-            is_wall_out <= is_wall;
-            is_person_out <= is_person_in;
-            is_collision_out <= is_collision;
             wall_depth_out <= wall_depth;
+            
             player_depth_out <= player_depth_in;
-
             hcount_out <= hcount_in;
             vcount_out <= vcount_in;
             data_valid_out <= data_valid_in;
