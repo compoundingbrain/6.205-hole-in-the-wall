@@ -1,4 +1,6 @@
 `define MAIN
+`define MAIN
+`define MAIN
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -747,7 +749,7 @@ module top_level
     .num_players(num_players),
     .data_valid_in(active_draw_hdmi),
     .is_person_in(disable_player_tracking ? 1'b0 :is_player),
-    .player_depth_in(player_depth),
+    .player_depth_in(player_depths[0]),
     .hcount_out(),
     .vcount_out(),
     .data_valid_out(),
