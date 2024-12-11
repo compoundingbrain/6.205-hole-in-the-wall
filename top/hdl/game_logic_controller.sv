@@ -21,6 +21,7 @@ module game_logic_controller #(
     input  wire [9:0]          vcount_in,
     input  wire                data_valid_in,
 
+    input  wire [1:0]          num_players,
     input  wire                is_person_in,
     input  wire [7:0]          player_depth_in,
 
@@ -123,12 +124,18 @@ module game_logic_controller #(
             game_started <= 1;
             wall_depth_rst <= 0;
             curr_round <= 0;
-            curr_wall_idx <= 0;
-            wall_tick_frequency <= MAX_FRAMES_PER_WALL_TICK;
+            wall_tick_frequency <= MAX_FRAMES_PER_WALL_TICK-4;
             new_round_pulse <= 0;
             wall_tick_pulse <= 0;
             game_state <= 1;
             num_collisions <= 0;
+
+            case(num_players)
+                0: curr_wall_idx <= 0;
+                1: curr_wall_idx <= 3;
+                2: curr_wall_idx <= 6;
+                3: curr_wall_idx <= 7;
+            endcase
 
         end else if (~game_started) begin
             // Game not started
