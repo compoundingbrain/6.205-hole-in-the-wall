@@ -11,7 +11,8 @@ module wall_depth_sprite #(
   input wire [10:0] hcount_in,
   input wire [9:0]  vcount_in,
   input wire [7:0] wall_depth_in,
-  input wire [7:0] player_depth_in,
+  input wire [1:0] num_players_in,
+  input wire [7:0] player_depths_in [3:0],
   output logic [23:0] pixel_out,
   output logic in_sprite
 );
@@ -30,10 +31,18 @@ module wall_depth_sprite #(
     else begin
       if(in_sprite) begin
         if (pixel_depth  == wall_depth_in)
+          // wall depth indicator
           pixel_out = WALL_COLOR;
-        else if (pixel_depth == player_depth_in)
+        else if (pixel_depth == player_depths_in[0])
           pixel_out = 24'h008000; // green
+        else if (pixel_depth == player_depths_in[1] && num_players_in >= 1)
+          pixel_out = 24'h800000; // red  
+        else if (pixel_depth == player_depths_in[2] && num_players_in >= 2)
+          pixel_out = 24'h800080; // purple
+        else if (pixel_depth == player_depths_in[3] && num_players_in == 4)
+          pixel_out = 24'hFF8000; // orange
         else if (pixel_depth == GOAL_DEPTH - GOAL_DEPTH_DELTA || pixel_depth == GOAL_DEPTH + GOAL_DEPTH_DELTA)
+          // goal depth bounds
           pixel_out = 24'h000080; // blue
         else
           pixel_out = 24'hFFFFFF; // white

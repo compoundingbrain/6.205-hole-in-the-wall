@@ -1,6 +1,4 @@
 `define MAIN
-`define MAIN
-`define MAIN
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -914,7 +912,8 @@ module top_level
     .vcount_in(vcount_hdmi),
     .pixel_player_num(pixel_player_num),
     .wall_depth(wall_depth),
-    .player_depth(player_depths[0]), // TODO: display multiple player depths
+    .player_depths(player_depths),
+    .num_players(num_players),
     .is_wall(disable_wall ? 1'b0 : pixel_is_wall),
     .is_collision(disable_player_tracking ? 1'b0 : pixel_is_collision),
     .pixel_in({piped_graphics_red, piped_graphics_green, piped_graphics_blue}),

@@ -17,7 +17,8 @@ module graphics_controller #(
     input wire [9:0] vcount_in,
     input wire [1:0] pixel_player_num,
     input wire [7:0] wall_depth,
-    input wire [7:0] player_depth,
+    input wire [7:0] player_depths [3:0],
+    input wire [1:0] num_players,
     input wire is_player,
     input wire is_wall,
     input wire is_collision,
@@ -40,7 +41,8 @@ module graphics_controller #(
         .hcount_in(hcount_in),
         .vcount_in(vcount_in),
         .wall_depth_in(wall_depth),
-        .player_depth_in(player_depth),
+        .num_players_in(num_players),
+        .player_depths_in(player_depths),
         .pixel_out(wall_depth_sprite_pixel),
         .in_sprite(in_wall_depth_sprite)
     );
