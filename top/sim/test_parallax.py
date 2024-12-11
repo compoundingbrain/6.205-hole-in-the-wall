@@ -20,7 +20,7 @@ BASELINE_DISTANCE = 6
 def get_expected_depth(x1, x2):
     # using formula Z (depth in inches) = (Focal Length * Baseline Distance * Pixel Density) / (x_1 - x_2)
     if x1 == x2: return 0xFF 
-    return int(ceil((FOCAL_LENGTH * BASELINE_DISTANCE * PIXEL_DENSITY) / abs(x1 - x2)))
+    return int((FOCAL_LENGTH * BASELINE_DISTANCE * PIXEL_DENSITY) / abs(x1 - x2))
 
 @cocotb.test()
 async def test_parallax_basic(dut):
@@ -30,6 +30,7 @@ async def test_parallax_basic(dut):
     # Start clock and reset
     cocotb.start_soon(Clock(dut.clk_in, 10, units="ns").start())
     dut.rst_in.value = 0
+    dut.data_valid_in.value = 0
     await ClockCycles(dut.clk_in, 1)
     dut.rst_in.value = 1
     await ClockCycles(dut.clk_in, 5)
@@ -48,7 +49,10 @@ async def test_parallax_basic(dut):
     for x1, x2, disparity in test_cases:
         dut.x_1_in.value = x1
         dut.x_2_in.value = x2
+        dut.data_valid_in.value = 1
         await RisingEdge(dut.clk_in)
+        dut.data_valid_in.value = 0
+        await ClockCycles(dut.clk_in, 3000)
         await RisingEdge(dut.clk_in)
         await RisingEdge(dut.clk_in)
         
@@ -66,6 +70,7 @@ async def test_parallax_edge_cases(dut):
     # Start clock and reset
     cocotb.start_soon(Clock(dut.clk_in, 10, units="ns").start())
     dut.rst_in.value = 1
+    dut.data_valid_in.value = 0
     await ClockCycles(dut.clk_in, 5)
     dut.rst_in.value = 0
     await RisingEdge(dut.clk_in)
@@ -73,7 +78,10 @@ async def test_parallax_edge_cases(dut):
     # Test maximum disparity
     dut.x_1_in.value = 0xFFF  # Maximum 12-bit value
     dut.x_2_in.value = 0
+    dut.data_valid_in.value = 1
     await RisingEdge(dut.clk_in)
+    dut.data_valid_in.value = 0
+    await ClockCycles(dut.clk_in, 3000)
     await RisingEdge(dut.clk_in)
     await RisingEdge(dut.clk_in)
     expected_depth = get_expected_depth(0xFFF, 0)
@@ -82,7 +90,10 @@ async def test_parallax_edge_cases(dut):
     # Test minimum disparity
     dut.x_1_in.value = 0
     dut.x_2_in.value = 0xFFF  # Maximum 12-bit value
+    dut.data_valid_in.value = 1
     await RisingEdge(dut.clk_in)
+    dut.data_valid_in.value = 0
+    await ClockCycles(dut.clk_in, 3000)
     await RisingEdge(dut.clk_in)
     expected_depth = get_expected_depth(0, 0xFFF)
     assert dut.depth_out.value.integer == expected_depth, f"Expected {expected_depth} for minimum disparity, got {dut.depth_out.value.integer}"
@@ -108,7 +119,7 @@ def test_runner():
     sys.path.append(str(proj_path / "sim" / "model"))
     
     # Define sources
-    sources = [proj_path / "hdl" / "parallax.sv"]
+    sources = [proj_path / "hdl" / "parallax.sv", proj_path / "hdl" / "divider.sv"]
     
     # Build arguments
     build_test_args = ["-Wall"]
