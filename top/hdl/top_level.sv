@@ -457,7 +457,7 @@ module top_level
   logic       cb_mask;
   // assign is_green_screen = (green_mask) & (fb_green > (fb_red >> shift_for_red_and_blue)) & (fb_green > (fb_blue >> shift_for_red_and_blue));
   assign is_green_screen = cr_mask & cb_mask;
-  assign is_in_game_window = (hcount_hdmi >= 120) & (hcount_hdmi <= 1279-120) & (vcount_hdmi >= 72) & (vcount_hdmi <= 719-72);
+  assign is_in_game_window = (hcount_hdmi >= 45) & (hcount_hdmi <= 1279-64) & (vcount_hdmi >= 0) & (vcount_hdmi <= 719-80);
   assign is_player = ~is_green_screen & is_in_game_window;
 
   //take lower 8 of full outputs.
