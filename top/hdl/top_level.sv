@@ -1,4 +1,9 @@
 `define MAIN
+`define MAIN
+`define MAIN
+`define MAIN
+`define MAIN
+`define MAIN
 `timescale 1ns / 1ps
 `default_nettype none
 
@@ -685,27 +690,26 @@ module top_level
   localparam FOCAL_LENGTH = 1;
   localparam BASELINE_DISTANCE = 1;
 `ifdef MAIN
-  genvar depth_i;
-  generate
-    for (depth_i = 0; depth_i < 4; depth_i++) begin
-      // TODO: pass in closest COM and tune parameters
-      parallax #(
-        .RESOLUTION_WIDTH(SCREEN_WIDTH),
-        .SENSOR_WIDTH(SENSOR_WIDTH),
-        .FOCAL_LENGTH(FOCAL_LENGTH),
-        .BASELINE_DISTANCE(BASELINE_DISTANCE)
-      ) plax (
-        .clk_in(clk_pixel),
-        .rst_in(sys_rst_pixel),
-        .data_valid_in(uart_rx_x_trigger[depth_i]),
-        .x_1_in(last_valid_x_com_out[depth_i]),
-        // User temp com value here since it's synced with uart trigger but in general want 
-        // to use secondary_com_x not temp_secondary_com_x
-        .x_2_in(temp_secondary_com_x[depth_i]),
-        .depth_out(player_depths[depth_i])
-      );
-    end
-  endgenerate
+  logic [9:0] zeroed_y [3:0];
+  assign zeroed_y[0] = 0;
+  assign zeroed_y[1] = 0;
+  assign zeroed_y[2] = 0;
+  assign zeroed_y[3] = 0;
+  parallax_over #(
+    .RESOLUTION_WIDTH(SCREEN_WIDTH),
+    .SENSOR_WIDTH(SENSOR_WIDTH),
+    .FOCAL_LENGTH(FOCAL_LENGTH),
+    .BASELINE_DISTANCE(BASELINE_DISTANCE)
+  ) plax_over (
+    .clk_in(clk_pixel),
+    .rst_in(sys_rst_pixel),
+    .data_valid_in(com_valid_out),
+    .x_in_1(last_valid_x_com_out),
+    .y_in_1(zeroed_y),
+    .x_in_2(temp_secondary_com_x),
+    .y_in_2(zeroed_y),
+    .depth_out(player_depths)
+  );
 `endif
 
   //============================================================================

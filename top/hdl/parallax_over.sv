@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-module parallax_over (
+module parallax_over #(parameter RESOLUTION_WIDTH = 1280, parameter SENSOR_WIDTH = 0.334646, parameter FOCAL_LENGTH = 0.1295276, parameter BASELINE_DISTANCE = 6)(
   input wire clk_in,
   input wire rst_in,
   input wire data_valid_in,
@@ -84,7 +84,12 @@ module parallax_over (
   end
 
   logic [7:0] depth_out_1;
-  parallax parallax_1 (
+  parallax #(
+    .RESOLUTION_WIDTH(RESOLUTION_WIDTH),
+    .SENSOR_WIDTH(SENSOR_WIDTH),
+    .FOCAL_LENGTH(FOCAL_LENGTH),
+    .BASELINE_DISTANCE(BASELINE_DISTANCE)
+  ) parallax_1 (
     .clk_in(clk_in),
     .rst_in(rst_in),
     .data_valid_in(valid_in_pipe_1),
@@ -162,7 +167,12 @@ module parallax_over (
   end
 
   logic [7:0] depth_out_2;
-  parallax parallax_2 (
+  parallax #(
+    .RESOLUTION_WIDTH(RESOLUTION_WIDTH),
+    .SENSOR_WIDTH(SENSOR_WIDTH),
+    .FOCAL_LENGTH(FOCAL_LENGTH),
+    .BASELINE_DISTANCE(BASELINE_DISTANCE)
+    ) parallax_2 (
     .clk_in(clk_in),
     .rst_in(rst_in),
     .data_valid_in(valid_in_pipe_2),
@@ -237,7 +247,12 @@ module parallax_over (
   end
 
   logic [7:0] depth_out_3;
-  parallax parallax_3 (
+  parallax #(
+    .RESOLUTION_WIDTH(RESOLUTION_WIDTH),
+    .SENSOR_WIDTH(SENSOR_WIDTH),
+    .FOCAL_LENGTH(FOCAL_LENGTH),
+    .BASELINE_DISTANCE(BASELINE_DISTANCE)
+    )parallax_3 (
     .clk_in(clk_in),
     .rst_in(rst_in),
     .data_valid_in(valid_in_pipe_3),
@@ -312,7 +327,12 @@ module parallax_over (
   end
 
   logic [7:0] depth_out_4;
-  parallax parallax_4 (
+  parallax #(
+    .RESOLUTION_WIDTH(RESOLUTION_WIDTH),
+    .SENSOR_WIDTH(SENSOR_WIDTH),
+    .FOCAL_LENGTH(FOCAL_LENGTH),
+    .BASELINE_DISTANCE(BASELINE_DISTANCE))
+    parallax_4 (
     .clk_in(clk_in),
     .rst_in(rst_in),
     .data_valid_in(valid_in_pipe_4),
